@@ -1,0 +1,75 @@
+[
+  {
+    "id": "P01",
+    "description": "기본 프로필: 만 27세 직장인, 연 3,000만원, 서울 1인 가구, 무주택 세대주, 전세, 가입 상품 없음",
+    "input": {
+      "birthDate": "1999-03-15",
+      "militaryMonths": 0,
+      "region": "서울",
+      "annualIncome": 3000,
+      "employment": "employee",
+      "householdType": "single",
+      "householdSize": 1,
+      "householdIncome": 3000,
+      "ownsHouse": false,
+      "isHouseholdHead": true,
+      "residence": "jeonse",
+      "ownedProductIds": []
+    },
+    "expected": {
+      "sample-saving-a": "eligible",
+      "sample-saving-b": "eligible",
+      "sample-loan-jeonse": "eligible",
+      "sample-housing-account": "eligible",
+      "sample-local-seoul": "eligible"
+    }
+  },
+  {
+    "id": "P02",
+    "description": "소득 경계값 초과: 연 5,001만원 (전세대출·청약 기준 5,000만원 이하)",
+    "input": {
+      "birthDate": "1999-03-15",
+      "militaryMonths": 0,
+      "region": "부산",
+      "annualIncome": 5001,
+      "employment": "employee",
+      "householdType": "single",
+      "householdSize": 1,
+      "householdIncome": 5001,
+      "ownsHouse": false,
+      "isHouseholdHead": true,
+      "residence": "jeonse",
+      "ownedProductIds": []
+    },
+    "expected": {
+      "sample-saving-a": "eligible",
+      "sample-loan-jeonse": "ineligible",
+      "sample-housing-account": "ineligible",
+      "sample-local-seoul": "ineligible"
+    }
+  },
+  {
+    "id": "P03",
+    "description": "'모름' 입력: 가구소득·세대주를 모름, 기존 적금 B 가입 중",
+    "input": {
+      "birthDate": "1999-03-15",
+      "militaryMonths": 0,
+      "region": "서울",
+      "annualIncome": 3000,
+      "employment": "employee",
+      "householdType": "single",
+      "householdSize": 1,
+      "householdIncome": null,
+      "ownsHouse": false,
+      "isHouseholdHead": null,
+      "residence": "jeonse",
+      "ownedProductIds": ["sample-saving-b"]
+    },
+    "expected": {
+      "sample-saving-a": "needsCheck",
+      "sample-loan-jeonse": "needsCheck",
+      "sample-local-seoul": "needsCheck"
+    },
+    "expectedConflicts": ["sample-saving-a"]
+  }
+]
