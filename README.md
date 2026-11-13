@@ -34,6 +34,8 @@ Next.js(App Router) · TypeScript · Tailwind CSS · Vitest · Vercel 배포
 | `app/products/[id]/`, `app/chat/`, `app/api/chat/` | 상품 상세, 챗봇 화면·API | ④ |
 | `lib/engine/__tests__/`, `docs/` | 테스트, 계획서·보고서 | ⑤ |
 
+브랜치·커밋·PR 규칙과 AI 활용 기록 방법은 [AGENTS.md](./AGENTS.md)를 따라요.
+
 ## API
 
 ### `POST /api/judge`
