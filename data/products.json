@@ -1,0 +1,245 @@
+[
+  {
+    "id": "sample-saving-a",
+    "name": "[예시] 청년 적금 A",
+    "category": "saving",
+    "provider": "[운영기관]",
+    "summary": "정부 기여금을 더해 주는 청년 자산형성 적금 (예시 데이터)",
+    "conditions": [
+      {
+        "id": "age",
+        "type": "age",
+        "label": "나이",
+        "min": 19,
+        "max": 34,
+        "militaryMaxMonths": 72,
+        "sourceText": "[공고 원문] 가입일 기준 만 19세 이상 34세 이하 (병역 이행 기간은 최대 6년까지 나이 계산에서 제외)"
+      },
+      {
+        "id": "income",
+        "type": "personalIncome",
+        "label": "개인 소득",
+        "max": 6000,
+        "sourceText": "[공고 원문] 직전 과세기간 총급여 6,000만원 이하"
+      },
+      {
+        "id": "household-income",
+        "type": "householdIncomeRatio",
+        "label": "가구 소득",
+        "maxPercent": 200,
+        "sourceText": "[공고 원문] 가구소득 기준 중위소득 200% 이하"
+      }
+    ],
+    "benefits": {
+      "summary": ["기본금리 [x.x]% + 우대 최대 [x.x]%p", "정부 기여금 월 최대 [00,000]원"],
+      "baseRate": 4.5,
+      "maxPreferentialRate": 1.5,
+      "preferentialRates": [
+        { "label": "급여이체", "rate": 0.5 },
+        { "label": "카드 실적", "rate": 0.5 },
+        { "label": "소득 우대", "rate": 0.5 }
+      ],
+      "governmentSupports": [
+        { "label": "정부 기여금", "description": "납입액의 [x]%, 월 최대 [00,000]원" },
+        { "label": "이자 비과세", "description": "만기 이자 소득세 면제" }
+      ]
+    },
+    "exclusiveWith": ["sample-saving-b"],
+    "switchGuides": [
+      {
+        "fromProductId": "sample-saving-b",
+        "steps": [
+          "새 상품 가입 자격 심사 결과를 먼저 받아요",
+          "[공식 전환 절차]에 따라 전환 신청을 해요",
+          "전환 완료 안내를 받은 뒤 기존 계좌를 정리해요"
+        ],
+        "warning": "심사 전에 기존 계좌부터 해지하면 혜택을 받지 못할 수 있어요",
+        "sourceText": "[공고 원문] 갈아타기 관련 문장"
+      }
+    ],
+    "schedules": [{ "label": "[N]차 신청", "start": "2026-12-01", "end": "2026-12-12" }],
+    "applyUrl": "https://example.com/apply/sample-saving-a",
+    "sourceUrl": "https://example.com/notice/sample-saving-a",
+    "asOf": "2026-11-13",
+    "noticeExcerpt": "[② 담당이 공고 핵심 발췌를 넣어 주세요]",
+    "isSample": true
+  },
+  {
+    "id": "sample-saving-b",
+    "name": "[예시] 청년 적금 B (기존 상품)",
+    "category": "saving",
+    "provider": "[운영기관]",
+    "summary": "이미 가입한 사람이 많은 기존 청년 적금 (예시 데이터)",
+    "conditions": [
+      {
+        "id": "age",
+        "type": "age",
+        "label": "나이",
+        "min": 19,
+        "max": 34,
+        "militaryMaxMonths": 72,
+        "sourceText": "[공고 원문] 만 19세 이상 34세 이하"
+      },
+      {
+        "id": "income",
+        "type": "personalIncome",
+        "label": "개인 소득",
+        "max": 7500,
+        "sourceText": "[공고 원문] 총급여 7,500만원 이하"
+      }
+    ],
+    "benefits": {
+      "summary": ["정부 기여금 월 최대 [00,000]원", "이자 비과세"],
+      "baseRate": 4.5,
+      "maxPreferentialRate": 1.5
+    },
+    "exclusiveWith": ["sample-saving-a"],
+    "applyUrl": "https://example.com/apply/sample-saving-b",
+    "sourceUrl": "https://example.com/notice/sample-saving-b",
+    "asOf": "2026-11-13",
+    "isSample": true
+  },
+  {
+    "id": "sample-loan-jeonse",
+    "name": "[예시] 청년 전세대출",
+    "category": "loan",
+    "provider": "[운영기관]",
+    "summary": "무주택 청년 세대주를 위한 저금리 전세자금 대출 (예시 데이터)",
+    "conditions": [
+      {
+        "id": "age",
+        "type": "age",
+        "label": "나이",
+        "min": 19,
+        "max": 34,
+        "sourceText": "[공고 원문] 만 19세 이상 34세 이하"
+      },
+      {
+        "id": "income",
+        "type": "personalIncome",
+        "label": "연소득",
+        "max": 5000,
+        "sourceText": "[공고 원문] 연소득 5,000만원 이하"
+      },
+      {
+        "id": "no-house",
+        "type": "noHouse",
+        "label": "무주택",
+        "sourceText": "[공고 원문] 무주택자"
+      },
+      {
+        "id": "head",
+        "type": "householdHead",
+        "label": "세대주",
+        "sourceText": "[공고 원문] 세대주(예정자 포함)"
+      },
+      {
+        "id": "residence",
+        "type": "residence",
+        "label": "전세 계약",
+        "allowed": ["jeonse"],
+        "sourceText": "[공고 원문] 임차보증금 5% 이상을 지불한 전세 계약자"
+      }
+    ],
+    "benefits": {
+      "summary": ["금리 연 [x.x]%", "최대 [0]억원"],
+      "baseRate": 2.5,
+      "maxPreferentialRate": 0.4,
+      "preferentialRates": [{ "label": "청약통장 가입", "rate": 0.2 }],
+      "governmentSupports": [{ "label": "정부 이자지원", "description": "[x.x]%p 금리 지원" }],
+      "limit": "최대 [0]억원"
+    },
+    "applyUrl": "https://example.com/apply/sample-loan-jeonse",
+    "sourceUrl": "https://example.com/notice/sample-loan-jeonse",
+    "asOf": "2026-11-13",
+    "isSample": true
+  },
+  {
+    "id": "sample-housing-account",
+    "name": "[예시] 청년 청약통장",
+    "category": "housing",
+    "provider": "[운영기관]",
+    "summary": "청년 우대금리와 소득공제가 있는 청약통장 (예시 데이터)",
+    "conditions": [
+      {
+        "id": "age",
+        "type": "age",
+        "label": "나이",
+        "min": 19,
+        "max": 34,
+        "militaryMaxMonths": 72,
+        "sourceText": "[공고 원문] 만 19세 이상 34세 이하"
+      },
+      {
+        "id": "income",
+        "type": "personalIncome",
+        "label": "연소득",
+        "max": 5000,
+        "allowZero": false,
+        "sourceText": "[공고 원문] 연소득 5,000만원 이하 (소득이 있는 자)"
+      },
+      {
+        "id": "no-house",
+        "type": "noHouse",
+        "label": "무주택",
+        "sourceText": "[공고 원문] 무주택자"
+      }
+    ],
+    "benefits": {
+      "summary": ["최대 연 [x.x]%", "소득공제·이자 비과세"],
+      "baseRate": 3.1,
+      "maxPreferentialRate": 1.4,
+      "governmentSupports": [{ "label": "소득공제·비과세", "description": "[조건] 충족 시 적용" }]
+    },
+    "applyUrl": "https://example.com/apply/sample-housing-account",
+    "sourceUrl": "https://example.com/notice/sample-housing-account",
+    "asOf": "2026-11-13",
+    "isSample": true
+  },
+  {
+    "id": "sample-local-seoul",
+    "name": "[예시] 서울 청년 지원 상품",
+    "category": "housing",
+    "provider": "[지자체]",
+    "summary": "서울 거주 청년 주거 지원 (예시 데이터)",
+    "conditions": [
+      {
+        "id": "age",
+        "type": "age",
+        "label": "나이",
+        "min": 19,
+        "max": 39,
+        "sourceText": "[공고 원문] 만 19세 이상 39세 이하"
+      },
+      {
+        "id": "region",
+        "type": "region",
+        "label": "거주 지역",
+        "allowed": ["서울"],
+        "sourceText": "[공고 원문] 서울시 거주 청년"
+      },
+      {
+        "id": "household-income",
+        "type": "householdIncomeRatio",
+        "label": "가구 소득",
+        "maxPercent": 150,
+        "sourceText": "[공고 원문] 가구소득 기준 중위소득 150% 이하"
+      },
+      {
+        "id": "no-house",
+        "type": "noHouse",
+        "label": "무주택",
+        "sourceText": "[공고 원문] 무주택자"
+      }
+    ],
+    "benefits": {
+      "summary": ["월 최대 [00]만원 지원"],
+      "governmentSupports": [{ "label": "지자체 지원금", "description": "월 최대 [00]만원, [N]개월" }]
+    },
+    "schedules": [{ "label": "[상·하반기] 모집", "start": "2027-03-01", "end": "2027-03-15" }],
+    "applyUrl": "https://example.com/apply/sample-local-seoul",
+    "sourceUrl": "https://example.com/notice/sample-local-seoul",
+    "asOf": "2026-11-13",
+    "isSample": true
+  }
+]
