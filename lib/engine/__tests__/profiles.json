@@ -1,36 +1,272 @@
 [
   {
     "id": "P01",
-    "description": "기본 프로필: 만 27세 직장인, 연 3,000만원, 서울 1인 가구, 무주택 세대주, 전세, 가입 상품 없음",
+    "description": "기본: 서울 월세 중소기업 사회초년생 (연 3,000만원) - 대부분 '가능', 미래적금 우대형",
     "input": {
       "birthDate": "1999-03-15",
       "militaryMonths": 0,
       "region": "서울",
       "annualIncome": 3000,
-      "employment": "employee",
+      "employment": "smeEmployee",
       "householdType": "single",
       "householdSize": 1,
       "householdIncome": 3000,
+      "ownsHouse": false,
+      "isHouseholdHead": true,
+      "residence": "monthlyRent",
+      "ownedProductIds": []
+    },
+    "expected": {
+      "youth-future-saving": "eligible",
+      "youth-housing-dream": "eligible",
+      "youth-jeonse-loan": "ineligible",
+      "youth-rent-loan": "eligible",
+      "sunshine-loan-youth": "eligible",
+      "seoul-youth-rent": "eligible"
+    },
+    "expectedConflicts": [],
+    "pending": {
+      "youth-leap-account": {
+        "expected": "ineligible",
+        "reason": "청년도약계좌는 2025년 12월 신규 가입 종료. 중복 가입 안내 때문에 상품 목록에는 있어야 하지만, 신규 가입 종료를 표현할 필드가 없어 '가능'으로 나올 수 있음"
+      }
+    }
+  },
+  {
+    "id": "P02",
+    "description": "청년도약계좌 보유 · 부산 전세 직장인 - 도약계좌 보유자 → 미래적금 '가능 + 갈아타기 안내', 버팀목 '가능'",
+    "input": {
+      "birthDate": "1995-06-20",
+      "militaryMonths": 0,
+      "region": "부산",
+      "annualIncome": 4200,
+      "employment": "employee",
+      "householdType": "single",
+      "householdSize": 1,
+      "householdIncome": 4200,
+      "ownsHouse": false,
+      "isHouseholdHead": true,
+      "residence": "jeonse",
+      "ownedProductIds": [
+        "youth-leap-account"
+      ]
+    },
+    "expected": {
+      "youth-future-saving": "eligible",
+      "youth-housing-dream": "eligible",
+      "youth-jeonse-loan": "eligible",
+      "youth-rent-loan": "ineligible",
+      "sunshine-loan-youth": "ineligible",
+      "seoul-youth-rent": "ineligible"
+    },
+    "expectedConflicts": [
+      "youth-future-saving"
+    ],
+    "expectedOwned": [
+      "youth-leap-account"
+    ]
+  },
+  {
+    "id": "P03",
+    "description": "나이 경계: 만 34세 마지막 날 - 만 34세 이하(포함) 경계 - 내일 35세가 되는 사람은 오늘 '충족'",
+    "input": {
+      "birthDate": "1991-11-14",
+      "militaryMonths": 0,
+      "region": "서울",
+      "annualIncome": 3800,
+      "employment": "employee",
+      "householdType": "single",
+      "householdSize": 1,
+      "householdIncome": 3800,
+      "ownsHouse": false,
+      "isHouseholdHead": true,
+      "residence": "monthlyRent",
+      "ownedProductIds": []
+    },
+    "expected": {
+      "youth-future-saving": "eligible",
+      "youth-housing-dream": "eligible",
+      "youth-jeonse-loan": "ineligible",
+      "youth-rent-loan": "eligible",
+      "sunshine-loan-youth": "ineligible",
+      "seoul-youth-rent": "eligible"
+    },
+    "expectedConflicts": []
+  },
+  {
+    "id": "P04",
+    "description": "나이 경계: 만 35세 생일 당일 - TC03과 하루 차이. 34세 상한 상품은 모두 '해당 없음', 39세 상한(서울월세)만 '가능'",
+    "input": {
+      "birthDate": "1991-11-13",
+      "militaryMonths": 0,
+      "region": "서울",
+      "annualIncome": 3800,
+      "employment": "employee",
+      "householdType": "single",
+      "householdSize": 1,
+      "householdIncome": 3800,
+      "ownsHouse": false,
+      "isHouseholdHead": true,
+      "residence": "monthlyRent",
+      "ownedProductIds": []
+    },
+    "expected": {
+      "youth-future-saving": "ineligible",
+      "youth-housing-dream": "ineligible",
+      "youth-jeonse-loan": "ineligible",
+      "youth-rent-loan": "ineligible",
+      "sunshine-loan-youth": "ineligible",
+      "seoul-youth-rent": "eligible"
+    },
+    "expectedConflicts": []
+  },
+  {
+    "id": "P05",
+    "description": "병역 기간 차감 (21개월) - 만 36세지만 병역 21개월 차감 → 만 34세로 미래적금·주택드림 '가능'. 병역 차감이 없는 월세대출·햇살론유스는 '해당 없음'(버팀목은 월세 거주라 '해당 없음')",
+    "input": {
+      "birthDate": "1990-05-01",
+      "militaryMonths": 21,
+      "region": "경기",
+      "annualIncome": 3400,
+      "employment": "smeEmployee",
+      "householdType": "single",
+      "householdSize": 1,
+      "householdIncome": 3400,
+      "ownsHouse": false,
+      "isHouseholdHead": true,
+      "residence": "monthlyRent",
+      "ownedProductIds": []
+    },
+    "expected": {
+      "youth-future-saving": "eligible",
+      "youth-housing-dream": "eligible",
+      "youth-jeonse-loan": "ineligible",
+      "youth-rent-loan": "ineligible",
+      "sunshine-loan-youth": "ineligible",
+      "seoul-youth-rent": "ineligible"
+    },
+    "expectedConflicts": []
+  },
+  {
+    "id": "P06",
+    "description": "병역 6년 상한 + 서울 제대군인 연장 - 병역 96개월이어도 최대 72개월만 차감 → 만 36세로 '해당 없음'. 서울월세는 제대군인 +3년으로 '가능'",
+    "input": {
+      "birthDate": "1984-01-01",
+      "militaryMonths": 96,
+      "region": "서울",
+      "annualIncome": 4000,
+      "employment": "employee",
+      "householdType": "single",
+      "householdSize": 1,
+      "householdIncome": 4000,
+      "ownsHouse": false,
+      "isHouseholdHead": true,
+      "residence": "monthlyRent",
+      "ownedProductIds": []
+    },
+    "expected": {
+      "youth-future-saving": "ineligible",
+      "youth-housing-dream": "ineligible",
+      "youth-jeonse-loan": "ineligible",
+      "youth-rent-loan": "ineligible",
+      "sunshine-loan-youth": "ineligible",
+      "seoul-youth-rent": "eligible"
+    },
+    "expectedConflicts": []
+  },
+  {
+    "id": "P07",
+    "description": "소득 없는 대학생 (부모님 집) - 소득 0원 → 미래적금·주택드림 '해당 없음', 햇살론유스는 '가능'",
+    "input": {
+      "birthDate": "2004-08-10",
+      "militaryMonths": 0,
+      "region": "서울",
+      "annualIncome": 0,
+      "employment": "student",
+      "householdType": "withParents",
+      "householdSize": 4,
+      "householdIncome": 8000,
+      "ownsHouse": false,
+      "isHouseholdHead": false,
+      "residence": "parents",
+      "ownedProductIds": []
+    },
+    "expected": {
+      "youth-future-saving": "ineligible",
+      "youth-housing-dream": "ineligible",
+      "youth-jeonse-loan": "ineligible",
+      "youth-rent-loan": "ineligible",
+      "sunshine-loan-youth": "eligible",
+      "seoul-youth-rent": "ineligible"
+    },
+    "expectedConflicts": []
+  },
+  {
+    "id": "P08",
+    "description": "'모름'을 많이 고른 사용자 - 모름(null)은 '확인 필요'. 단, 다른 조건이 미충족이면 '해당 없음'이 우선",
+    "input": {
+      "birthDate": "2000-01-20",
+      "militaryMonths": null,
+      "region": null,
+      "annualIncome": null,
+      "employment": null,
+      "householdType": "single",
+      "householdSize": 1,
+      "householdIncome": null,
+      "ownsHouse": null,
+      "isHouseholdHead": null,
+      "residence": "monthlyRent",
+      "ownedProductIds": null
+    },
+    "expected": {
+      "youth-future-saving": "needsCheck",
+      "youth-housing-dream": "needsCheck",
+      "youth-jeonse-loan": "ineligible",
+      "youth-rent-loan": "needsCheck",
+      "sunshine-loan-youth": "needsCheck",
+      "seoul-youth-rent": "needsCheck"
+    },
+    "expectedConflicts": [
+      "youth-future-saving",
+      "youth-jeonse-loan",
+      "youth-leap-account",
+      "youth-rent-loan"
+    ]
+  },
+  {
+    "id": "P09",
+    "description": "소득 경계: 연소득 정확히 5,000만원 (이하 포함) → 주택드림·버팀목 '가능'",
+    "input": {
+      "birthDate": "1997-09-01",
+      "militaryMonths": 0,
+      "region": "인천",
+      "annualIncome": 5000,
+      "employment": "employee",
+      "householdType": "single",
+      "householdSize": 1,
+      "householdIncome": 5000,
       "ownsHouse": false,
       "isHouseholdHead": true,
       "residence": "jeonse",
       "ownedProductIds": []
     },
     "expected": {
-      "sample-saving-a": "eligible",
-      "sample-saving-b": "eligible",
-      "sample-loan-jeonse": "eligible",
-      "sample-housing-account": "eligible",
-      "sample-local-seoul": "eligible"
-    }
+      "youth-future-saving": "eligible",
+      "youth-housing-dream": "eligible",
+      "youth-jeonse-loan": "eligible",
+      "youth-rent-loan": "ineligible",
+      "sunshine-loan-youth": "ineligible",
+      "seoul-youth-rent": "ineligible"
+    },
+    "expectedConflicts": []
   },
   {
-    "id": "P02",
-    "description": "소득 경계값 초과: 연 5,001만원 (전세대출·청약 기준 5,000만원 이하)",
+    "id": "P10",
+    "description": "소득 경계: 5,001만원 - TC09와 1만원 차이 → 주택드림·버팀목 '해당 없음'",
     "input": {
-      "birthDate": "1999-03-15",
+      "birthDate": "1997-09-01",
       "militaryMonths": 0,
-      "region": "부산",
+      "region": "인천",
       "annualIncome": 5001,
       "employment": "employee",
       "householdType": "single",
@@ -42,34 +278,301 @@
       "ownedProductIds": []
     },
     "expected": {
-      "sample-saving-a": "eligible",
-      "sample-loan-jeonse": "ineligible",
-      "sample-housing-account": "ineligible",
-      "sample-local-seoul": "ineligible"
-    }
+      "youth-future-saving": "eligible",
+      "youth-housing-dream": "ineligible",
+      "youth-jeonse-loan": "ineligible",
+      "youth-rent-loan": "ineligible",
+      "sunshine-loan-youth": "ineligible",
+      "seoul-youth-rent": "ineligible"
+    },
+    "expectedConflicts": []
   },
   {
-    "id": "P03",
-    "description": "'모름' 입력: 가구소득·세대주를 모름, 기존 적금 B 가입 중",
+    "id": "P11",
+    "description": "알바하는 취준생 (소득 3,500만원 경계) - 햇살론유스 3,500만원 '이하' 포함 경계 → '가능'",
     "input": {
-      "birthDate": "1999-03-15",
+      "birthDate": "2001-04-05",
       "militaryMonths": 0,
       "region": "서울",
-      "annualIncome": 3000,
+      "annualIncome": 3500,
+      "employment": "student",
+      "householdType": "single",
+      "householdSize": 1,
+      "householdIncome": 3500,
+      "ownsHouse": false,
+      "isHouseholdHead": true,
+      "residence": "monthlyRent",
+      "ownedProductIds": []
+    },
+    "expected": {
+      "youth-future-saving": "eligible",
+      "youth-housing-dream": "eligible",
+      "youth-jeonse-loan": "ineligible",
+      "youth-rent-loan": "eligible",
+      "sunshine-loan-youth": "eligible",
+      "seoul-youth-rent": "eligible"
+    },
+    "expectedConflicts": []
+  },
+  {
+    "id": "P12",
+    "description": "1인 가구 고소득 (개인소득 OK, 가구소득 초과) - 미래적금 개인소득 7,500 이하지만 1인 가구 중위소득 200% 초과 → '해당 없음'",
+    "input": {
+      "birthDate": "1993-02-14",
+      "militaryMonths": 0,
+      "region": "서울",
+      "annualIncome": 7000,
       "employment": "employee",
       "householdType": "single",
       "householdSize": 1,
-      "householdIncome": null,
+      "householdIncome": 7000,
       "ownsHouse": false,
-      "isHouseholdHead": null,
+      "isHouseholdHead": true,
       "residence": "jeonse",
-      "ownedProductIds": ["sample-saving-b"]
+      "ownedProductIds": []
     },
     "expected": {
-      "sample-saving-a": "needsCheck",
-      "sample-loan-jeonse": "needsCheck",
-      "sample-local-seoul": "needsCheck"
+      "youth-future-saving": "ineligible",
+      "youth-housing-dream": "ineligible",
+      "youth-jeonse-loan": "ineligible",
+      "youth-rent-loan": "ineligible",
+      "sunshine-loan-youth": "ineligible",
+      "seoul-youth-rent": "ineligible"
     },
-    "expectedConflicts": ["sample-saving-a"]
+    "expectedConflicts": []
+  },
+  {
+    "id": "P13",
+    "description": "맞벌이 신혼부부 (기여금 미대상 구간) - 본인 6,500만원 → 미래적금 '가능'이지만 기여금 없이 비과세만. 버팀목은 부부합산 소득으로 판정",
+    "input": {
+      "birthDate": "1994-07-07",
+      "militaryMonths": 0,
+      "region": "경기",
+      "annualIncome": 6500,
+      "employment": "employee",
+      "householdType": "married",
+      "householdSize": 2,
+      "householdIncome": 9500,
+      "ownsHouse": false,
+      "isHouseholdHead": true,
+      "residence": "jeonse",
+      "ownedProductIds": []
+    },
+    "expected": {
+      "youth-future-saving": "eligible",
+      "youth-housing-dream": "ineligible",
+      "youth-jeonse-loan": "ineligible",
+      "youth-rent-loan": "ineligible",
+      "sunshine-loan-youth": "ineligible",
+      "seoul-youth-rent": "ineligible"
+    },
+    "expectedConflicts": []
+  },
+  {
+    "id": "P14",
+    "description": "이미 청년미래적금 + 전세대출 이용 중 - 중복 가입 판정: 미래적금 1인 1계좌, 전세대출 중복 불가 → '해당 없음'",
+    "input": {
+      "birthDate": "1998-12-01",
+      "militaryMonths": 0,
+      "region": "서울",
+      "annualIncome": 3200,
+      "employment": "smeEmployee",
+      "householdType": "single",
+      "householdSize": 1,
+      "householdIncome": 3200,
+      "ownsHouse": false,
+      "isHouseholdHead": true,
+      "residence": "jeonse",
+      "ownedProductIds": [
+        "youth-future-saving",
+        "youth-jeonse-loan"
+      ]
+    },
+    "expected": {
+      "youth-housing-dream": "eligible",
+      "youth-rent-loan": "ineligible",
+      "sunshine-loan-youth": "eligible",
+      "seoul-youth-rent": "ineligible"
+    },
+    "expectedConflicts": [
+      "youth-leap-account",
+      "youth-rent-loan"
+    ],
+    "expectedOwned": [
+      "youth-future-saving",
+      "youth-jeonse-loan"
+    ]
+  },
+  {
+    "id": "P15",
+    "description": "저소득 취준생 (서울월세 소득 하한) - 서울월세는 중위소득 48% '초과'부터 → 39%라 '해당 없음'. 다른 상품은 '가능'",
+    "input": {
+      "birthDate": "2003-03-03",
+      "militaryMonths": 0,
+      "region": "서울",
+      "annualIncome": 1200,
+      "employment": "student",
+      "householdType": "single",
+      "householdSize": 1,
+      "householdIncome": 1200,
+      "ownsHouse": false,
+      "isHouseholdHead": true,
+      "residence": "monthlyRent",
+      "ownedProductIds": []
+    },
+    "expected": {
+      "youth-future-saving": "eligible",
+      "youth-housing-dream": "eligible",
+      "youth-jeonse-loan": "ineligible",
+      "youth-rent-loan": "eligible",
+      "sunshine-loan-youth": "eligible"
+    },
+    "expectedConflicts": [],
+    "pending": {
+      "seoul-youth-rent": {
+        "expected": "ineligible",
+        "reason": "공고: 중위소득 48% 초과~150% 이하. 엔진·types.ts에 하한(minPercent)이 없어 지금은 '가능'으로 나옴"
+      }
+    }
+  },
+  {
+    "id": "P16",
+    "description": "본인 명의 주택 보유 - 무주택 조건 상품만 '해당 없음'. 미래적금은 무주택 조건이 없어 '가능'",
+    "input": {
+      "birthDate": "1996-10-10",
+      "militaryMonths": 0,
+      "region": "서울",
+      "annualIncome": 4000,
+      "employment": "employee",
+      "householdType": "single",
+      "householdSize": 1,
+      "householdIncome": 4000,
+      "ownsHouse": true,
+      "isHouseholdHead": true,
+      "residence": "other",
+      "ownedProductIds": []
+    },
+    "expected": {
+      "youth-future-saving": "eligible",
+      "youth-housing-dream": "ineligible",
+      "youth-jeonse-loan": "ineligible",
+      "youth-rent-loan": "ineligible",
+      "sunshine-loan-youth": "ineligible",
+      "seoul-youth-rent": "ineligible"
+    },
+    "expectedConflicts": []
+  },
+  {
+    "id": "P17",
+    "description": "나이 경계: 만 18세 (내일 19세) - 만 19세 미만 → 모든 상품 '해당 없음'",
+    "input": {
+      "birthDate": "2007-11-14",
+      "militaryMonths": 0,
+      "region": "서울",
+      "annualIncome": 300,
+      "employment": "student",
+      "householdType": "withParents",
+      "householdSize": 4,
+      "householdIncome": 6000,
+      "ownsHouse": false,
+      "isHouseholdHead": false,
+      "residence": "parents",
+      "ownedProductIds": []
+    },
+    "expected": {
+      "youth-future-saving": "ineligible",
+      "youth-housing-dream": "ineligible",
+      "youth-jeonse-loan": "ineligible",
+      "youth-rent-loan": "ineligible",
+      "sunshine-loan-youth": "ineligible",
+      "seoul-youth-rent": "ineligible"
+    },
+    "expectedConflicts": []
+  },
+  {
+    "id": "P18",
+    "description": "나이 경계: 만 19세 생일 당일 - TC17과 하루 차이 → 미래적금·주택드림·햇살론유스 '가능'",
+    "input": {
+      "birthDate": "2007-11-13",
+      "militaryMonths": 0,
+      "region": "서울",
+      "annualIncome": 300,
+      "employment": "student",
+      "householdType": "withParents",
+      "householdSize": 4,
+      "householdIncome": 6000,
+      "ownsHouse": false,
+      "isHouseholdHead": false,
+      "residence": "parents",
+      "ownedProductIds": []
+    },
+    "expected": {
+      "youth-future-saving": "eligible",
+      "youth-housing-dream": "eligible",
+      "youth-jeonse-loan": "ineligible",
+      "youth-rent-loan": "ineligible",
+      "sunshine-loan-youth": "eligible",
+      "seoul-youth-rent": "ineligible"
+    },
+    "expectedConflicts": []
+  },
+  {
+    "id": "P19",
+    "description": "서울월세 중위소득 150% 경계 (4,616만원) - 1인 가구 150% = 4,615.6만원 → 4,616만원은 150.01%로 '해당 없음' (만원 반올림 버그 확인용)",
+    "input": {
+      "birthDate": "1995-01-01",
+      "militaryMonths": 0,
+      "region": "서울",
+      "annualIncome": 4616,
+      "employment": "employee",
+      "householdType": "single",
+      "householdSize": 1,
+      "householdIncome": 4616,
+      "ownsHouse": false,
+      "isHouseholdHead": true,
+      "residence": "monthlyRent",
+      "ownedProductIds": []
+    },
+    "expected": {
+      "youth-future-saving": "eligible",
+      "youth-housing-dream": "eligible",
+      "youth-jeonse-loan": "ineligible",
+      "youth-rent-loan": "eligible",
+      "sunshine-loan-youth": "ineligible"
+    },
+    "expectedConflicts": [],
+    "pending": {
+      "seoul-youth-rent": {
+        "expected": "ineligible",
+        "reason": "150.01%인데 엔진이 비율을 소수 첫째 자리로 반올림(150.0)한 뒤 비교해서 '가능'으로 나옴. 비교는 반올림 전 값으로 해야 함"
+      }
+    }
+  },
+  {
+    "id": "P20",
+    "description": "서울월세 중위소득 150% 경계 (4,615만원) - TC19와 1만원 차이 → 149.98%로 '가능'",
+    "input": {
+      "birthDate": "1995-01-01",
+      "militaryMonths": 0,
+      "region": "서울",
+      "annualIncome": 4615,
+      "employment": "employee",
+      "householdType": "single",
+      "householdSize": 1,
+      "householdIncome": 4615,
+      "ownsHouse": false,
+      "isHouseholdHead": true,
+      "residence": "monthlyRent",
+      "ownedProductIds": []
+    },
+    "expected": {
+      "youth-future-saving": "eligible",
+      "youth-housing-dream": "eligible",
+      "youth-jeonse-loan": "ineligible",
+      "youth-rent-loan": "eligible",
+      "sunshine-loan-youth": "ineligible",
+      "seoul-youth-rent": "eligible"
+    },
+    "expectedConflicts": []
   }
 ]
