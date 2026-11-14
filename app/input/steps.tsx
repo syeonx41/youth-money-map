@@ -154,7 +154,8 @@ export function AgeStep({ draft, updateDraft, errors }: StepProps) {
           onChange={(birthDigits) => updateDraft({ birthDigits })}
           error={errors.birthDigits}
         />
-        {birth && (
+        {/* "다음"을 눌러 칸 아래 오류가 이미 보이면 같은 문구를 한 번 더 보여주지 않아요 */}
+        {birth && (birth.ok || !errors.birthDigits) && (
           <p
             className={`rounded-lg border px-4 py-3 text-sm ${
               birth.ok ? "border-gray-200 bg-gray-50 text-gray-800" : "border-red-200 bg-red-50 text-red-700"
