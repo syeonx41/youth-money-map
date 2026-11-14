@@ -15,8 +15,10 @@ import {
   buildResultView,
   filterCards,
   initialTab,
+  productHref,
   summarizeInput,
   toggleFilter,
+  type ResultCard,
   type ResultTab,
   type ResultView,
 } from "../result-view";
@@ -201,5 +203,112 @@ describe("조건 요약 줄", () => {
 
   it("입력값이 없으면 요약 줄도 비어요", () => {
     expect(buildResultView(judge(profileInput("P01")), null, products).summary).toEqual([]);
+  });
+});
+
+function card(view: ResultView, productId: string): ResultCard {
+  const found = view.tabs.flatMap((t) => t.cards).find((c) => c.productId === productId);
+  if (!found) throw new Error(`카드 ${productId} 없음`);
+  return found;
+}
+
+describe("카드 내용", () => {
+  it("가능: ✔ 충족 조건에 신청 시 확인 조건이 섞이지 않아요", () => {
+    const c = card(viewOf("P02"), "youth-jeonse-loan");
+    expect(c.kind).toBe("eligible");
+    expect(c.metLabels).toEqual(["나이", "연소득 (부부합산)", "무주택", "세대주", "전세 계약"]);
+    const checkAtApplyLabels = c.judgement.conditions.filter((x) => x.status === "checkAtApply").map((x) => x.label);
+    expect(checkAtApplyLabels.length).toBeGreaterThan(0);
+    for (const l of checkAtApplyLabels) expect(c.metLabels).not.toContain(l);
+  });
+
+  it("가능: 혜택 요약은 benefits.summary 앞 2줄", () => {
+    const c = card(viewOf("P02"), "youth-jeonse-loan");
+    expect(c.product?.benefits.summary.length).toBeGreaterThan(2);
+    expect(c.benefitLines).toEqual(c.product?.benefits.summary.slice(0, 2));
+  });
+
+  it("신청 시 확인 조건 개수: 버팀목 7개, 미래적금 2개, 주택드림 0개", () => {
+    const view = viewOf("P02");
+    expect(card(view, "youth-jeonse-loan").checkAtApplyCount).toBe(7);
+    expect(card(view, "youth-future-saving").checkAtApplyCount).toBe(2);
+    expect(card(view, "youth-housing-dream").checkAtApplyCount).toBe(0);
+  });
+
+  it("확인 필요: 모름 조건 label 만, 신청 시 확인 조건 개수도 보여줘요", () => {
+    const c = card(viewOf("P08"), "youth-rent-loan");
+    expect(c.kind).toBe("needsCheck");
+    expect(c.unknownLabels).toEqual(["연소득 (부부합산)", "무주택", "단독세대주"]);
+    expect(c.metLabels).toEqual([]);
+    expect(c.benefitLines).toEqual([]);
+    expect(c.reason).toBeNull();
+    expect(c.checkAtApplyCount).toBe(8);
+  });
+
+  it("해당 없음: 핵심 이유(summaryReason) 한 줄만", () => {
+    const c = card(viewOf("P02"), "sunshine-loan-youth");
+    expect(c.kind).toBe("ineligible");
+    expect(c.reason).toBe(c.judgement.summaryReason);
+    expect(c.reason).toBe("연소득 4,200만원 → 소득 조건(3,500만원 이하) 미충족");
+    expect(c.metLabels).toEqual([]);
+    expect(c.unknownLabels).toEqual([]);
+    expect(c.benefitLines).toEqual([]);
+    expect(c.checkAtApplyCount).toBe(0);
+  });
+
+  it("가입 중: 카드 내용 줄이 없어요", () => {
+    const c = card(viewOf("P02"), "youth-leap-account");
+    expect([c.metLabels, c.unknownLabels, c.benefitLines, c.warnings]).toEqual([[], [], [], []]);
+    expect(c.reason).toBeNull();
+  });
+
+  it("카드는 상품 상세 화면 링크예요", () => {
+    for (const t of viewOf("P02").tabs) {
+      for (const c of t.cards) expect(c.href).toBe(`/products/${c.productId}`);
+    }
+    expect(productHref("youth-future-saving")).toBe("/products/youth-future-saving");
+  });
+});
+
+describe("경고 띠", () => {
+  it("P02: 미래적금 '가능 · 전환 필요' + 경고 띠 + 갈아타기 순서 링크", () => {
+    const saving = tab(viewOf("P02"), "saving");
+    expect(saving.cards[0].badge).toBe("가능 · 전환 필요");
+    expect(saving.warnings).toEqual([
+      {
+        productId: "youth-future-saving",
+        kind: "owned",
+        text: "청년미래적금은 가입 중인 청년도약계좌와 동시에 가입할 수 없어요.",
+        switchHref: "/products/youth-future-saving",
+      },
+    ]);
+  });
+
+  it("P02: 충돌이 없는 탭에는 경고 띠가 없어요", () => {
+    const view = viewOf("P02");
+    expect(tab(view, "loan").warnings).toEqual([]);
+    expect(tab(view, "housing").warnings).toEqual([]);
+  });
+
+  it("P08: 가입 여부 모름이면 확인 필요 카드 위에 '가입 중이라면' 안내", () => {
+    const view = viewOf("P08");
+    const saving = tab(view, "saving");
+    expect(saving.warnings).toHaveLength(1);
+    expect(saving.warnings[0].kind).toBe("unknown");
+    expect(saving.warnings[0].text).toContain("청년도약계좌에 가입 중이라면");
+    // 미래적금에는 도약계좌에서 갈아타는 안내가 있어서 링크도 보여줘요
+    expect(saving.warnings[0].switchHref).toBe("/products/youth-future-saving");
+
+    const loan = tab(view, "loan");
+    expect(loan.warnings.map((w) => [w.productId, w.kind, w.switchHref])).toEqual([["youth-rent-loan", "unknown", null]]);
+  });
+
+  it("P08: 해당 없음 카드의 충돌은 엔진이 줘도 보여주지 않아요", () => {
+    const view = viewOf("P08");
+    const jeonse = card(view, "youth-jeonse-loan");
+    expect(jeonse.kind).toBe("ineligible");
+    expect(jeonse.judgement.conflicts.length).toBeGreaterThan(0);
+    expect(jeonse.warnings).toEqual([]);
+    expect(tab(view, "loan").warnings.map((w) => w.productId)).not.toContain("youth-jeonse-loan");
   });
 });

@@ -9,9 +9,14 @@
  * - 정렬: 가능 → 확인 필요 → 해당 없음, 가입 중 카드는 맨 아래 (같은 상태 안에서는 데이터 순서)
  * - 상태 칩: 탭 안 가능/확인 필요/해당 없음 개수. 개수 0이면 비활성. 가입 중 카드는 세지 않아요
  * - 조건 요약 줄: 만 나이 · 연소득 · 가구 형태 · 주택·세대주 · 가입 상품. 모름(null)은 빼요
+ * - 카드 내용: 가능 → 충족 조건(신청 시 확인 조건 제외)·혜택 요약 1~2줄·신청 시 확인 조건 개수
+ *             확인 필요 → 모름 조건·신청 시 확인 조건 개수 / 해당 없음 → summaryReason / 가입 중 → 없음
+ * - 경고 띠: 가능·확인 필요 카드의 conflicts만 (해당 없음·가입 중 카드는 엔진이 줘도 안 보여줘요)
  */
 import { formatManwon, manAge } from "@/lib/engine";
 import type {
+  ConditionStatus,
+  ConflictWarning,
   HouseholdType,
   JudgeResponse,
   JudgeStatus,
@@ -60,8 +65,33 @@ export interface ResultCard {
   filterStatus: JudgeStatus | null;
   /** 엔진 판정 그대로. 조건·이유·충돌 표시(04)에 써요 */
   judgement: ProductJudgement;
-  /** 상품 데이터. 혜택 요약 등(04)에 써요. 데이터에 없으면 null */
+  /** 상품 데이터. 데이터에 없으면 null */
   product: Product | null;
+  /** 카드를 누르면 가는 상품 상세 화면(④) */
+  href: string;
+  /** "✔ 조건" 목록. 가능 카드만, 신청 시 확인 조건은 빼요 */
+  metLabels: string[];
+  /** "? 조건 → 모름" 목록. 확인 필요 카드만 */
+  unknownLabels: string[];
+  /** "✖ 이유" 한 줄. 해당 없음 카드만, 아니면 null */
+  reason: string | null;
+  /** 혜택 요약 최대 2줄 (benefits.summary). 가능 카드만 */
+  benefitLines: string[];
+  /** "신청할 때 확인할 조건 N개". 가능·확인 필요 카드만 세고, 나머지는 0 */
+  checkAtApplyCount: number;
+  /** 이 카드에서 나온 경고 띠. 가능·확인 필요 카드만 */
+  warnings: ConflictBanner[];
+}
+
+/** 목록 위 경고 띠 1개 (중복 가입·갈아타기) */
+export interface ConflictBanner {
+  /** 경고가 붙은 카드의 상품 id */
+  productId: string;
+  /** owned: 가입 중인 상품과 동시 가입 불가 / unknown: 가입 여부를 몰라서 확인 필요 */
+  kind: ConflictWarning["kind"];
+  text: string;
+  /** 갈아타기 안내가 있으면 "갈아타기 순서 보기 →" 링크(상품 상세), 없으면 null */
+  switchHref: string | null;
 }
 
 export interface StatusChip {
@@ -80,6 +110,8 @@ export interface ResultTab {
   chips: StatusChip[];
   /** 정렬된 전체 카드. 칩 필터는 filterCards 로 걸러요 */
   cards: ResultCard[];
+  /** 목록 위 경고 띠. 탭 안 가능·확인 필요 카드의 conflicts 를 카드 순서대로 */
+  warnings: ConflictBanner[];
 }
 
 export interface ResultView {
@@ -94,6 +126,65 @@ function cardKind(j: ProductJudgement): ResultCardKind {
   return j.status;
 }
 
+/** 상품 상세 화면(④) 주소 */
+export function productHref(productId: string): string {
+  return `/products/${encodeURIComponent(productId)}`;
+}
+
+/** 챗봇 화면(④) 주소 */
+export const CHAT_HREF = "/chat";
+
+/** 받침이 있으면 withFinal, 없으면 withoutFinal (한글이 아니면 받침 없음으로 봐요) */
+function josa(word: string, withFinal: string, withoutFinal: string): string {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  const hasFinal = code >= 0 && code <= 11171 && code % 28 !== 0;
+  return word + (hasFinal ? withFinal : withoutFinal);
+}
+
+function conflictBanner(productId: string, productName: string, c: ConflictWarning): ConflictBanner {
+  const text =
+    c.kind === "owned"
+      ? `${josa(productName, "은", "는")} 가입 중인 ${josa(c.conflictingProductName, "과", "와")} 동시에 가입할 수 없어요.`
+      : `${c.conflictingProductName}에 가입 중이라면 ${productName}에 동시에 가입할 수 없어요. 가입 여부를 확인해 주세요.`;
+  return { productId, kind: c.kind, text, switchHref: c.switchGuide ? productHref(productId) : null };
+}
+
+type CardContent = Pick<
+  ResultCard,
+  "metLabels" | "unknownLabels" | "reason" | "benefitLines" | "checkAtApplyCount" | "warnings"
+>;
+
+function cardContent(kind: ResultCardKind, j: ProductJudgement, product: Product | null): CardContent {
+  const labels = (status: ConditionStatus) => j.conditions.filter((c) => c.status === status).map((c) => c.label);
+  const checkAtApplyCount = labels("checkAtApply").length;
+  const warnings = j.conflicts.map((c) => conflictBanner(j.productId, j.productName, c));
+  const empty: CardContent = {
+    metLabels: [],
+    unknownLabels: [],
+    reason: null,
+    benefitLines: [],
+    checkAtApplyCount: 0,
+    warnings: [],
+  };
+  switch (kind) {
+    case "eligible":
+    case "eligibleSwitch":
+      return {
+        ...empty,
+        metLabels: labels("met"),
+        benefitLines: product?.benefits.summary.slice(0, 2) ?? [],
+        checkAtApplyCount,
+        warnings,
+      };
+    case "needsCheck":
+      return { ...empty, unknownLabels: labels("unknown"), checkAtApplyCount, warnings };
+    case "ineligible":
+      return { ...empty, reason: j.summaryReason };
+    case "owned":
+      return empty;
+  }
+}
+
 function sortKey(card: ResultCard): number {
   return card.filterStatus === null ? STATUS_ORDER.length : STATUS_ORDER.indexOf(card.filterStatus);
 }
@@ -106,6 +197,7 @@ export function buildResultView(result: JudgeResponse, input: UserInput | null, 
     .filter((j) => j.owned || !j.signupClosed)
     .map((j) => {
       const kind = cardKind(j);
+      const product = productById.get(j.productId) ?? null;
       return {
         productId: j.productId,
         productName: j.productName,
@@ -113,7 +205,9 @@ export function buildResultView(result: JudgeResponse, input: UserInput | null, 
         badge: CARD_BADGE[kind],
         filterStatus: kind === "owned" ? null : j.status,
         judgement: j,
-        product: productById.get(j.productId) ?? null,
+        product,
+        href: productHref(j.productId),
+        ...cardContent(kind, j, product),
       };
     });
 
@@ -124,7 +218,8 @@ export function buildResultView(result: JudgeResponse, input: UserInput | null, 
       const count = tabCards.filter((c) => c.filterStatus === status).length;
       return { status, label: STATUS_LABEL[status], count, disabled: count === 0 };
     });
-    return { id, label, count: tabCards.length, chips, cards: tabCards };
+    const warnings = tabCards.flatMap((c) => c.warnings);
+    return { id, label, count: tabCards.length, chips, cards: tabCards, warnings };
   });
 
   return { summary: input ? summarizeInput(input, result.judgedAt, products) : [], tabs };

@@ -6,10 +6,10 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { products } from "@/lib/data";
-import { buildResultView, filterCards, initialTab, toggleFilter } from "@/lib/result/result-view";
+import { CHAT_HREF, buildResultView, filterCards, initialTab, toggleFilter } from "@/lib/result/result-view";
 import { useJudgeSession } from "@/lib/session/judge-session";
 import type { JudgeStatus, ProductCategory } from "@/types";
-import { ResultCardView } from "./result-card";
+import { ConflictBannerView, ResultCardView } from "./result-card";
 
 const CHIP_STYLE: Record<JudgeStatus, string> = {
   eligible: "border border-gray-800",
@@ -79,7 +79,7 @@ export default function ResultPage() {
         })}
       </nav>
 
-      <main className="flex flex-1 flex-col gap-3 px-5 py-4">
+      <main className="flex flex-1 flex-col gap-3 px-5 pt-4 pb-28">
         <div className="flex flex-wrap gap-2">
           {tab.chips.map((chip) => {
             const active = filter === chip.status;
@@ -100,7 +100,13 @@ export default function ResultPage() {
           })}
         </div>
 
-        {/* 04: 경고 띠(중복 가입·갈아타기) 자리 */}
+        {tab.warnings.length > 0 && (
+          <ul className="flex flex-col gap-2">
+            {tab.warnings.map((banner) => (
+              <ConflictBannerView key={`${banner.productId}-${banner.text}`} banner={banner} />
+            ))}
+          </ul>
+        )}
 
         {cards.length > 0 ? (
           <ul className="flex flex-col gap-3">
@@ -112,8 +118,18 @@ export default function ResultPage() {
           <p className="py-8 text-center text-sm text-gray-500">이 탭에 보여줄 상품이 없어요.</p>
         )}
 
-        <p className="mt-4 text-xs text-gray-500">판정은 참고용이고, 최종 자격은 신청처 심사로 결정돼요.</p>
+        <p className="mt-4 text-xs text-gray-500">판정은 참고용이에요. 최종 자격은 각 신청처 심사로 결정돼요.</p>
       </main>
+
+      {/* 떠 있는 버튼: 화면 폭(430px) 안 오른쪽 아래에 고정 */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 mx-auto flex max-w-[430px] justify-end px-5 pb-5">
+        <Link
+          href={CHAT_HREF}
+          className="pointer-events-auto flex h-14 items-center rounded-full bg-gray-800 px-6 font-bold text-white shadow-lg"
+        >
+          AI에게 물어보기
+        </Link>
+      </div>
     </div>
   );
 }
