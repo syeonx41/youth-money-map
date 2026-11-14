@@ -99,3 +99,17 @@ AI 도구는 작업을 시작하기 전에 이 파일과 `README.md`, `types.ts`
 - '문제'와 '해결'은 실제로 있었던 일만 적어요. 없으면 생략하고 꾸며내지 않아요.
 - 기록 파일 변경은 그 작업의 커밋에 함께 포함해요.
 - 웹 AI(ChatGPT, Claude 웹 등)를 쓴 경우에는 사람이 대화 공유 링크를 같은 파일에 한 줄 남겨요.
+
+## 9. Agent skills
+
+### Issue tracker
+
+이슈·스펙은 각자 로컬 `.scratch/` 폴더에 마크다운으로 관리해요 (`.gitignore` 처리, 커밋 안 함). GitHub는 PR에만 써요. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+기본 라벨 5개(`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`)를 티켓 파일의 `Status:` 줄에 써요. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+단일 구조예요. 루트 `GLOSSARY.md` + `docs/adr/`이고, 필요해질 때 만들어요. See `docs/agents/domain.md`.

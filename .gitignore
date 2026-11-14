@@ -20,3 +20,6 @@ next-env.d.ts
 # misc
 .DS_Store
 npm-debug.log*
+
+# 개인 작업 메모·로컬 이슈 (docs/agents/issue-tracker.md)
+.scratch/
