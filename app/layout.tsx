@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { JudgeSessionProvider } from "@/lib/session/judge-session";
 
 export const metadata: Metadata = {
   title: "청년머니맵",
@@ -16,7 +17,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="ko">
       <body>
         {/* 모바일 기준 화면 폭 */}
-        <div className="mx-auto min-h-screen max-w-[430px]">{children}</div>
+        <div className="mx-auto min-h-screen max-w-[430px]">
+          {/* 입력값·판정 결과를 메모리에만 두는 공유 세션 (③④) */}
+          <JudgeSessionProvider>{children}</JudgeSessionProvider>
+        </div>
       </body>
     </html>
   );
