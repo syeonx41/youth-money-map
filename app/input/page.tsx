@@ -18,6 +18,7 @@ import {
   type InputDraft,
 } from "@/lib/session/input-draft";
 import { useJudgeSession } from "@/lib/session/judge-session";
+import { AlertIcon, CalendarIcon, CardIcon, CheckIcon, ChevronLeftIcon, HouseIcon, InfoIcon, UsersIcon, WalletIcon } from "../ui/icons";
 import { AgeStep, HouseholdStep, HousingStep, IncomeStep, OwnedStep, type StepProps } from "./steps";
 
 /** 단계 목록과 같은 길이의 화면 목록 */
@@ -31,6 +32,20 @@ const STEP_VIEWS: StepViews<typeof INPUT_STEPS> = [
   HousingStep,
   OwnedStep,
 ];
+
+/** 진행 표시 아이콘과 짧은 이름. INPUT_STEPS 와 같은 순서예요 */
+const STEP_ICONS = [CalendarIcon, WalletIcon, UsersIcon, HouseIcon, CardIcon];
+const STEP_SHORT_NAME = INPUT_STEPS.map((s) => (s.name === "가입 중인 상품" ? "가입 상품" : s.name));
+
+const STEP_DOT = {
+  done: "bg-go text-white",
+  now: "bg-go-soft text-go-deep ring-2 ring-go",
+  todo: "bg-sea text-ink-mute",
+};
+
+const BACK_LINK = "flex h-10 items-center gap-0.5 justify-self-start rounded-lg pr-2 text-sm text-ink-soft";
+const PREV_BUTTON =
+  "flex h-13 items-center justify-center rounded-2xl border border-line bg-white text-base font-medium text-ink active:bg-sea";
 
 /**
  * 판정 요청 실패 종류
@@ -143,78 +158,96 @@ function InputFlow() {
 
   return (
     <form onSubmit={next} noValidate className="flex min-h-screen flex-col">
-      <header className="flex items-center gap-4 border-b border-gray-200 px-5 py-4">
+      <header className="grid grid-cols-[1fr_auto_1fr] items-center px-3 pt-3 pb-1">
         {step === 1 ? (
-          <Link href="/" className="text-sm text-gray-600">
-            ← 처음
+          <Link href="/" className={BACK_LINK}>
+            <ChevronLeftIcon size={20} />
+            처음
           </Link>
         ) : (
-          <button type="button" onClick={goBack} className="text-sm text-gray-600">
-            ← 이전
+          <button type="button" onClick={goBack} className={BACK_LINK}>
+            <ChevronLeftIcon size={20} />
+            이전
           </button>
         )}
-        <h1 className="text-lg font-bold">내 조건 입력</h1>
+        <h1 className="text-base font-semibold text-ink">내 조건 입력</h1>
+        <span />
       </header>
 
-      <div className="flex flex-col gap-2 px-5 pt-5">
-        <div className="flex items-center justify-between text-sm text-gray-600">
-          <span>
-            {step} / {STEP_COUNT} 단계
-          </span>
-          <span>{name}</span>
-        </div>
-        <div
-          role="progressbar"
-          aria-valuemin={1}
-          aria-valuemax={STEP_COUNT}
-          aria-valuenow={step}
-          aria-label={`${step} / ${STEP_COUNT} 단계 · ${name}`}
-          className="h-1.5 overflow-hidden rounded-full bg-gray-200"
-        >
-          <div className="h-full rounded-full bg-gray-700" style={{ width: `${(step / STEP_COUNT) * 100}%` }} />
-        </div>
+      {/* 진행 표시: 단계마다 아이콘 하나. 지난 단계는 체크로 바뀌어요 */}
+      <div
+        role="progressbar"
+        aria-valuemin={1}
+        aria-valuemax={STEP_COUNT}
+        aria-valuenow={step}
+        aria-label={`${step} / ${STEP_COUNT} 단계, ${name}`}
+        className="flex items-start px-5 pt-4"
+      >
+        {INPUT_STEPS.map((s, i) => {
+          const n = i + 1;
+          const Icon = n < step ? CheckIcon : STEP_ICONS[i];
+          const state = n < step ? "done" : n === step ? "now" : "todo";
+          return (
+            <div key={s.name} className="flex flex-1 flex-col items-center gap-1.5">
+              <div className="flex w-full items-center">
+                <span className={`h-0.5 flex-1 ${i === 0 ? "invisible" : n <= step ? "bg-go" : "bg-line"}`} />
+                <span className={`flex size-9 items-center justify-center rounded-full ${STEP_DOT[state]}`}>
+                  <Icon size={18} strokeWidth={state === "done" ? 2.25 : 1.75} />
+                </span>
+                <span className={`h-0.5 flex-1 ${n === STEP_COUNT ? "invisible" : n < step ? "bg-go" : "bg-line"}`} />
+              </div>
+              <span className={`text-xs ${state === "now" ? "font-semibold text-go-deep" : "text-ink-mute"}`}>
+                {STEP_SHORT_NAME[i]}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
-      <main className="flex flex-1 flex-col gap-6 px-5 py-6">
+      <main className="flex flex-1 flex-col gap-7 px-5 pt-7 pb-6">
         <StepView draft={draft} updateDraft={editDraft} errors={errors} />
         {step > 1 && (
-          <p className="text-xs text-gray-500">생년월일 말고는 몰라도 괜찮아요. 고르지 않은 항목은 &apos;확인 필요&apos;로 표시돼요.</p>
+          <p className="flex items-start gap-2 text-[13px] leading-relaxed text-ink-mute">
+            <InfoIcon size={16} className="mt-0.5" />
+            생년월일 말고는 몰라도 괜찮아요. 고르지 않은 항목은 &apos;확인 필요&apos;로 표시돼요.
+          </p>
         )}
       </main>
 
-      <footer className="sticky bottom-0 flex flex-col gap-2 border-t border-gray-200 bg-white px-5 py-4">
+      <footer className="sticky bottom-0 flex flex-col gap-2 border-t border-line bg-white px-5 py-3">
         {isLast && requestFailure === "input" && (
-          <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+          <p role="alert" className="flex items-start gap-2 rounded-xl bg-bad-soft px-4 py-3 text-sm text-bad">
+            <AlertIcon size={18} className="mt-0.5" />
             판정할 수 없는 입력이에요. 입력값을 확인해 주세요.
           </p>
         )}
         {isLast && requestFailure === "retry" && (
-          <div role="alert" className="flex items-center justify-between gap-3 rounded-lg bg-red-50 px-4 py-3">
-            <p className="text-sm text-red-700">판정 요청에 실패했어요. 잠시 후 다시 시도해 주세요.</p>
+          <div role="alert" className="flex items-center justify-between gap-3 rounded-xl bg-bad-soft px-4 py-3">
+            <p className="text-sm text-bad">판정 요청에 실패했어요. 잠시 후 다시 시도해 주세요.</p>
             <button
               type="button"
               onClick={() => void judge()}
               disabled={loading}
-              className="shrink-0 rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-semibold text-red-700"
+              className="shrink-0 rounded-lg border border-bad/40 bg-white px-3 py-1.5 text-sm font-semibold text-bad"
             >
               다시 시도
             </button>
           </div>
         )}
-        <div className="grid grid-cols-[2fr_3fr] gap-3">
+        <div className="grid grid-cols-[2fr_3fr] gap-2.5">
           {step === 1 ? (
-            <Link href="/" className="flex h-13 items-center justify-center rounded-lg border border-gray-400 bg-white">
+            <Link href="/" className={PREV_BUTTON}>
               이전
             </Link>
           ) : (
-            <button type="button" onClick={goBack} className="h-13 rounded-lg border border-gray-400 bg-white">
+            <button type="button" onClick={goBack} className={PREV_BUTTON}>
               이전
             </button>
           )}
           <button
             type="submit"
             disabled={loading}
-            className="h-13 rounded-lg bg-gray-800 font-semibold text-white disabled:opacity-60"
+            className="h-13 rounded-2xl bg-go text-base font-semibold text-white active:bg-go-deep disabled:opacity-60"
           >
             {isLast ? (loading ? "판정하는 중…" : "결과 보기") : "다음"}
           </button>

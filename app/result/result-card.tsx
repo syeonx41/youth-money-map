@@ -2,57 +2,115 @@
 // 카드 전체가 상품 상세 화면(④) 링크예요. 어떤 줄을 보여줄지는 모델이 카드 종류별로 정해 둬요.
 import Link from "next/link";
 import type { ConflictBanner, ResultCard, ResultCardKind } from "@/lib/result/result-view";
-
-const ELIGIBLE_CARD = "border-2 border-gray-800 bg-white";
-const ELIGIBLE_BADGE = "bg-gray-800 text-white";
+import {
+  AlertIcon,
+  CheckIcon,
+  ChevronRightIcon,
+  ClipboardCheckIcon,
+  HelpIcon,
+  SwapIcon,
+  XIcon,
+  type IconProps,
+} from "../ui/icons";
+import { ProductArt } from "../ui/product-art";
+import { STATUS_SOLID } from "../ui/status";
 
 const CARD_STYLE: Record<ResultCardKind, string> = {
-  eligible: ELIGIBLE_CARD,
-  eligibleSwitch: ELIGIBLE_CARD,
-  needsCheck: "border-2 border-dashed border-gray-500 bg-white",
-  ineligible: "border border-gray-300 bg-gray-50 text-gray-500",
-  owned: "border border-gray-300 bg-gray-100 text-gray-600",
+  eligible: "border-line bg-white",
+  eligibleSwitch: "border-line bg-white",
+  needsCheck: "border-check-line/70 bg-white",
+  ineligible: "border-line bg-stop-soft/60",
+  owned: "border-line bg-stop-soft/60",
 };
 
 const BADGE_STYLE: Record<ResultCardKind, string> = {
-  eligible: ELIGIBLE_BADGE,
-  eligibleSwitch: ELIGIBLE_BADGE,
-  needsCheck: "border border-dashed border-gray-600 text-gray-800",
-  ineligible: "border border-gray-400 text-gray-500",
-  owned: "border border-gray-400 text-gray-600",
+  eligible: STATUS_SOLID.eligible,
+  eligibleSwitch: STATUS_SOLID.eligible,
+  needsCheck: STATUS_SOLID.needsCheck,
+  ineligible: STATUS_SOLID.ineligible,
+  owned: "bg-white text-ink-soft ring-1 ring-inset ring-line",
+};
+
+const BADGE_ICON: Record<ResultCardKind, ((props: IconProps) => React.ReactNode) | null> = {
+  eligible: CheckIcon,
+  eligibleSwitch: SwapIcon,
+  needsCheck: HelpIcon,
+  ineligible: XIcon,
+  owned: null,
 };
 
 export function ResultCardView({ card }: { card: ResultCard }) {
+  const muted = card.kind === "ineligible" || card.kind === "owned";
+  const BadgeIcon = BADGE_ICON[card.kind];
+
   return (
     <li>
-      <Link href={card.href} className={`flex flex-col gap-2 rounded-xl px-4 py-4 ${CARD_STYLE[card.kind]}`}>
-        <div className="flex items-start justify-between gap-3">
-          <span className="text-base font-bold">{card.productName}</span>
-          <span className={`shrink-0 rounded-md px-2 py-1 text-xs font-semibold ${BADGE_STYLE[card.kind]}`}>
+      <Link
+        href={card.href}
+        className={`flex flex-col gap-3 rounded-2xl border px-4 py-4 active:bg-sea ${CARD_STYLE[card.kind]}`}
+      >
+        <div className="flex items-start gap-3">
+          <ProductArt productId={card.productId} category={card.judgement.category} muted={muted} />
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5 pt-0.5">
+            <span className={`text-base leading-snug font-bold ${muted ? "text-ink-soft" : "text-ink"}`}>
+              {card.productName}
+            </span>
+            {card.product?.provider && <span className="text-xs text-ink-mute">{card.product.provider}</span>}
+          </div>
+          <span
+            className={`mt-0.5 flex shrink-0 items-center gap-1 rounded-full py-1 pr-2.5 pl-2 text-xs font-semibold ${BADGE_STYLE[card.kind]} ${
+              BadgeIcon ? "" : "pl-2.5"
+            }`}
+          >
+            {BadgeIcon && <BadgeIcon size={14} strokeWidth={2.25} />}
             {card.badge}
           </span>
         </div>
 
+        {/* 가능: 충족한 조건 */}
         {card.metLabels.length > 0 && (
-          <p className="text-sm text-gray-800">{card.metLabels.map((l) => `✔ ${l}`).join(" · ")}</p>
-        )}
-
-        {card.unknownLabels.length > 0 && (
-          <ul className="flex flex-col gap-0.5 text-sm text-gray-800">
-            {card.unknownLabels.map((l, i) => (
-              <li key={i}>? {l} → 모름</li>
+          <ul className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-ink">
+            {card.metLabels.map((label, i) => (
+              <li key={i} className="flex items-center gap-1">
+                <CheckIcon size={15} strokeWidth={2.5} className="text-go" />
+                {label}
+              </li>
             ))}
           </ul>
         )}
 
-        {card.reason && (
-          <p className="text-sm">
-            ✖ {card.reason} · <span className="whitespace-nowrap underline">왜 안 되는지 보기 →</span>
-          </p>
+        {/* 확인 필요: 모른다고 넘긴 조건 */}
+        {card.unknownLabels.length > 0 && (
+          <div className="flex flex-col gap-2 rounded-xl bg-check-soft px-3 py-3">
+            <p className="text-[13px] font-semibold text-check">아직 모르는 조건 {card.unknownLabels.length}개</p>
+            <ul className="flex flex-wrap gap-1.5">
+              {card.unknownLabels.map((label, i) => (
+                <li
+                  key={i}
+                  className="rounded-full bg-white px-2.5 py-1 text-[13px] font-medium text-ink ring-1 ring-inset ring-check-line"
+                >
+                  {label}
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs leading-relaxed text-check">이 조건을 알아보고 입력하면 판정이 정해져요.</p>
+          </div>
         )}
 
+        {/* 해당 없음: 이유 한 줄 */}
+        {card.reason && (
+          <div className="flex flex-col gap-1.5 text-sm text-ink-soft">
+            <p>{card.reason}</p>
+            <span className="flex items-center gap-0.5 font-medium text-ink">
+              왜 안 되는지 보기
+              <ChevronRightIcon size={16} />
+            </span>
+          </div>
+        )}
+
+        {/* 가능: 혜택 요약 */}
         {card.benefitLines.length > 0 && (
-          <ul className="flex flex-col gap-0.5 text-sm text-gray-600">
+          <ul className="flex flex-col gap-1 border-t border-line pt-3 text-sm leading-relaxed text-ink-soft">
             {card.benefitLines.map((line, i) => (
               <li key={i}>{line}</li>
             ))}
@@ -60,7 +118,10 @@ export function ResultCardView({ card }: { card: ResultCard }) {
         )}
 
         {card.checkAtApplyCount > 0 && (
-          <p className="text-xs text-gray-500">ⓘ 신청할 때 확인할 조건 {card.checkAtApplyCount}개</p>
+          <p className="flex items-center gap-1.5 text-xs text-ink-mute">
+            <ClipboardCheckIcon size={15} />
+            신청할 때 확인할 조건 {card.checkAtApplyCount}개
+          </p>
         )}
       </Link>
     </li>
@@ -70,16 +131,17 @@ export function ResultCardView({ card }: { card: ResultCard }) {
 /** 목록 위 경고 띠 (중복 가입·갈아타기) */
 export function ConflictBannerView({ banner }: { banner: ConflictBanner }) {
   return (
-    <li className="rounded-xl border border-gray-400 bg-amber-50 px-4 py-3 text-sm text-gray-800">
-      ⚠ {banner.text}
-      {banner.switchHref && (
-        <>
-          {" "}
-          <Link href={banner.switchHref} className="whitespace-nowrap underline">
-            갈아타기 순서 보기 →
+    <li className="flex items-start gap-2.5 rounded-2xl bg-check-soft px-4 py-3 text-sm leading-relaxed text-ink">
+      <AlertIcon size={18} className="mt-0.5 text-check" />
+      <div className="flex flex-col gap-1">
+        <p>{banner.text}</p>
+        {banner.switchHref && (
+          <Link href={banner.switchHref} className="flex items-center gap-0.5 font-semibold text-check">
+            갈아타기 순서 보기
+            <ChevronRightIcon size={16} />
           </Link>
-        </>
-      )}
+        )}
+      </div>
     </li>
   );
 }

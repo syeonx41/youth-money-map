@@ -4,6 +4,8 @@ import Link from "next/link";
 import type { ProductCategory } from "@/types";
 import { RESULT_TABS } from "@/lib/result/result-view";
 import { useJudgeSession } from "@/lib/session/judge-session";
+import { ChevronRightIcon } from "./ui/icons";
+import { CATEGORY_ICON } from "./ui/product-art";
 
 /** 첫 화면에서는 "청약·주거" 탭을 "청약"으로 짧게 보여줘요 */
 const HOME_LABEL: Partial<Record<ProductCategory, string>> = { housing: "청약" };
@@ -17,9 +19,10 @@ export function StartButton() {
     <Link
       href="/input"
       onClick={() => resetSession(null)}
-      className="flex h-13 items-center justify-center rounded-lg bg-gray-800 font-semibold text-white"
+      className="mt-2 flex h-14 items-center justify-between rounded-2xl bg-go pr-4 pl-6 text-[17px] font-semibold text-white active:bg-go-deep"
     >
       내 조건으로 찾기
+      <ChevronRightIcon size={22} strokeWidth={2} />
     </Link>
   );
 }
@@ -29,16 +32,20 @@ export function CategoryButtons() {
   const { resetSession } = useJudgeSession();
   return (
     <div className="grid grid-cols-3 gap-2">
-      {CATEGORY_BUTTONS.map(({ tab, label }) => (
-        <Link
-          key={tab}
-          href="/input"
-          onClick={() => resetSession(tab)}
-          className="flex h-16 items-center justify-center rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-800"
-        >
-          {label}
-        </Link>
-      ))}
+      {CATEGORY_BUTTONS.map(({ tab, label }) => {
+        const Icon = CATEGORY_ICON[tab];
+        return (
+          <Link
+            key={tab}
+            href="/input"
+            onClick={() => resetSession(tab)}
+            className="flex flex-col items-start gap-3 rounded-2xl border border-line bg-white px-4 py-4 text-[15px] font-semibold text-ink active:bg-sea"
+          >
+            <Icon size={24} className="text-go" />
+            {label}
+          </Link>
+        );
+      })}
     </div>
   );
 }

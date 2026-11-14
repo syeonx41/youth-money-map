@@ -16,12 +16,26 @@ import {
 } from "@/lib/result/result-view";
 import { useJudgeSession } from "@/lib/session/judge-session";
 import type { JudgeStatus, ProductCategory } from "@/types";
+import { ChatIcon, ChevronLeftIcon, InfoIcon, SlidersIcon } from "../ui/icons";
+import { CATEGORY_ICON } from "../ui/product-art";
+import { STATUS_ICON } from "../ui/status";
 import { ConflictBannerView, ResultCardView } from "./result-card";
 
-const CHIP_STYLE: Record<JudgeStatus, string> = {
-  eligible: "border border-gray-800",
-  needsCheck: "border border-dashed border-gray-600",
-  ineligible: "border border-gray-300 text-gray-600",
+/** 고르지 않은 칩 */
+const CHIP_IDLE = "bg-white text-ink ring-1 ring-inset ring-line";
+
+/** 아이콘 색 (고르지 않은 칩) */
+const CHIP_ICON: Record<JudgeStatus, string> = {
+  eligible: "text-go",
+  needsCheck: "text-check",
+  ineligible: "text-stop",
+};
+
+/** 고른 칩 */
+const CHIP_ACTIVE: Record<JudgeStatus, string> = {
+  eligible: "bg-go text-white",
+  needsCheck: "bg-check text-white",
+  ineligible: "bg-stop text-white",
 };
 
 export default function ResultPage() {
@@ -33,10 +47,16 @@ export default function ResultPage() {
 
   if (!view) {
     return (
-      <main className="flex flex-col items-center gap-4 px-5 py-16 text-center">
-        <h1 className="text-xl font-semibold">조회 결과가 없어요</h1>
-        <p className="text-sm text-gray-600">입력한 정보는 저장하지 않아요. 다시 입력해 주세요</p>
-        <Link href="/input" className="flex h-12 items-center rounded-lg bg-gray-800 px-6 font-semibold text-white">
+      <main className="flex flex-col items-center gap-4 px-5 py-20 text-center">
+        <span className="flex size-14 items-center justify-center rounded-full bg-sea text-ink-mute">
+          <SlidersIcon size={26} />
+        </span>
+        <h1 className="text-xl font-bold text-ink">조회 결과가 없어요</h1>
+        <p className="text-sm text-ink-soft">입력한 정보는 저장하지 않아요. 다시 입력해 주세요.</p>
+        <Link
+          href="/input"
+          className="mt-2 flex h-13 items-center rounded-2xl bg-go px-7 font-semibold text-white active:bg-go-deep"
+        >
           조건 입력하기
         </Link>
       </main>
@@ -54,22 +74,36 @@ export default function ResultPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="grid grid-cols-[1fr_auto_1fr] items-center border-b border-gray-200 px-5 py-4">
+      <header className="grid grid-cols-[1fr_auto_1fr] items-center px-3 pt-3 pb-1">
         {/* 입력값이 남은 입력 화면 1단계로 가요. 다시 "결과 보기"를 누르면 새로 판정해요 */}
-        <Link href="/input?step=1" className="text-sm text-gray-700">
-          ← 조건 수정
+        <Link
+          href="/input?step=1"
+          className="flex h-10 items-center gap-0.5 justify-self-start rounded-lg pr-2 text-sm text-ink-soft"
+        >
+          <ChevronLeftIcon size={20} />
+          조건 수정
         </Link>
-        <h1 className="text-lg font-bold">조회 결과</h1>
+        <h1 className="text-base font-semibold text-ink">조회 결과</h1>
         <span />
       </header>
 
       {view.summary.length > 0 && (
-        <p className="bg-gray-100 px-5 py-3 text-sm text-gray-700">{view.summary.join(" · ")}</p>
+        <section className="mx-5 mt-3 flex flex-col gap-2 rounded-2xl bg-sea px-4 py-3">
+          <h2 className="text-xs font-semibold text-ink-mute">입력한 조건</h2>
+          <ul className="flex flex-wrap gap-1.5">
+            {view.summary.map((item) => (
+              <li key={item} className="rounded-full bg-white px-2.5 py-1 text-[13px] text-ink">
+                {item}
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
-      <nav className="grid grid-cols-3 border-b border-gray-200" role="tablist">
+      <nav className="mt-4 grid grid-cols-3 border-b border-line px-5" role="tablist">
         {view.tabs.map((t) => {
           const active = t.id === tab.id;
+          const Icon = CATEGORY_ICON[t.id];
           return (
             <button
               key={t.id}
@@ -77,11 +111,13 @@ export default function ResultPage() {
               role="tab"
               aria-selected={active}
               onClick={() => selectTab(t.id)}
-              className={`py-3 text-base ${
-                active ? "border-b-2 border-gray-900 font-bold text-gray-900" : "text-gray-500"
+              className={`-mb-px flex items-center justify-center gap-1.5 border-b-2 py-3 text-[15px] ${
+                active ? "border-go font-bold text-ink" : "border-transparent text-ink-mute"
               }`}
             >
-              {t.label} ({t.count})
+              <Icon size={18} className={active ? "text-go" : ""} />
+              {t.label}
+              <span className={`text-[13px] font-semibold ${active ? "text-go" : ""}`}>{t.count}</span>
             </button>
           );
         })}
@@ -91,6 +127,7 @@ export default function ResultPage() {
         <div className="flex flex-wrap gap-2">
           {tab.chips.map((chip) => {
             const active = filter === chip.status;
+            const Icon = STATUS_ICON[chip.status];
             return (
               <button
                 key={chip.status}
@@ -98,11 +135,13 @@ export default function ResultPage() {
                 aria-pressed={active}
                 disabled={chip.disabled}
                 onClick={() => setFilter((current) => toggleFilter(current, chip.status))}
-                className={`rounded-full px-3 py-1 text-sm ${CHIP_STYLE[chip.status]} ${
-                  active ? "bg-gray-800 text-white" : ""
-                } disabled:opacity-40`}
+                className={`flex h-9 items-center gap-1.5 rounded-full pr-3.5 pl-2.5 text-sm font-medium transition-colors disabled:opacity-40 ${
+                  active ? CHIP_ACTIVE[chip.status] : CHIP_IDLE
+                }`}
               >
-                {chip.label} {chip.count}
+                <Icon size={16} strokeWidth={2.25} className={active ? "" : CHIP_ICON[chip.status]} />
+                {chip.label}
+                <span className="font-semibold">{chip.count}</span>
               </button>
             );
           })}
@@ -123,18 +162,22 @@ export default function ResultPage() {
             ))}
           </ul>
         ) : (
-          <p className="py-8 text-center text-sm text-gray-500">이 탭에 보여줄 상품이 없어요.</p>
+          <p className="py-10 text-center text-sm text-ink-mute">이 탭에 보여줄 상품이 없어요.</p>
         )}
 
-        <p className="mt-4 text-xs text-gray-500">판정은 참고용이에요. 최종 자격은 각 신청처 심사로 결정돼요.</p>
+        <p className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-ink-mute">
+          <InfoIcon size={15} className="mt-px" />
+          판정은 참고용이에요. 최종 자격은 각 신청처 심사로 결정돼요.
+        </p>
       </main>
 
       {/* 떠 있는 버튼: 화면 폭(430px) 안 오른쪽 아래에 고정 */}
       <div className="pointer-events-none fixed inset-x-0 bottom-0 mx-auto flex max-w-[430px] justify-end px-5 pb-5">
         <Link
           href={CHAT_HREF}
-          className="pointer-events-auto flex h-14 items-center rounded-full bg-gray-800 px-6 font-bold text-white shadow-lg"
+          className="pointer-events-auto flex h-14 items-center gap-2 rounded-full bg-ink pr-6 pl-5 font-semibold text-white shadow-[0_6px_20px_rgb(20_38_31/0.28)]"
         >
+          <ChatIcon size={20} />
           AI에게 물어보기
         </Link>
       </div>
