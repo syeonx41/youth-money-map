@@ -66,12 +66,18 @@ Next.js(App Router) · TypeScript · Tailwind CSS · Vitest · Vercel 배포
 - 조건 하나라도 미충족 → **해당 없음**
 - 미충족은 없고 '모름'이 있음 → **확인 필요**
 - 모든 조건 충족 → **가능**
+- 신규 가입 종료 상품(`newSignupClosed`) → 조건과 상관없이 **해당 없음**
+- '신청 시 확인' 조건(`checkAtApply`)은 판정에 영향이 없어요 (조건 결과 `status: "checkAtApply"`)
+- 중위소득 비율은 반올림 전 값으로 비교하고, 문구에서만 반올림해요
 
 ## ② 상품 데이터 추가 방법
 
 1. `data/products.json` 에 상품을 추가해요. 형식은 `types.ts` 의 `Product`.
-2. 조건 종류: `age`, `personalIncome`, `householdIncomeRatio`, `householdIncome`, `noHouse`, `householdHead`, `employment`, `region`, `residence`
+2. 조건 종류: `age`, `personalIncome`, `householdIncomeRatio`, `householdIncome`, `noHouse`, `householdHead`, `employment`, `region`, `residence`, `checkAtApply`
+   - 중위소득 하한이 있으면 `householdIncomeRatio` 에 `minPercent` 를 넣어요. 하한은 "초과"예요. (예: 48% 초과~150% 이하 → `minPercent: 48, maxPercent: 150`)
+   - 순자산·보증금·면적처럼 입력받지 않는 조건은 `checkAtApply` 로 넣어요. 판정에는 영향이 없고 화면에 "신청할 때 확인돼요"로 보여줘요. `description` 에 화면 문구를 적어요.
 3. 동시 가입이 안 되는 상품은 **양쪽 모두** `exclusiveWith` 에 적어요.
+   - 신규 가입이 끝난 상품은 `"newSignupClosed": true` 와 `signupClosedNote` 를 넣어요. 판정은 '해당 없음'이지만 결과 목록과 갈아타기 안내에는 계속 쓰여요.
 4. `npm test` 를 돌리면 형식 오류를 알려줘요.
 5. 실제 공고로 바꾼 상품은 `isSample` 을 지워요.
 

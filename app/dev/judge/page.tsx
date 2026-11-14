@@ -16,7 +16,7 @@ const SAMPLE: UserInput = {
   ownsHouse: false,
   isHouseholdHead: true,
   residence: "jeonse",
-  ownedProductIds: ["sample-saving-b"],
+  ownedProductIds: ["youth-leap-account"],
   mainBank: null,
 };
 
@@ -56,7 +56,10 @@ export default function DevJudgePage() {
         <section key={r.productId} className="rounded border border-gray-300 p-3">
           <div className="flex justify-between font-semibold">
             <span>{r.productName}</span>
-            <span>{r.owned ? "가입 중" : BADGE[r.status]}</span>
+            <span>
+              {r.owned ? "가입 중" : BADGE[r.status]}
+              {r.signupClosed && " (신규 가입 종료)"}
+            </span>
           </div>
           <ul className="mt-2 list-disc pl-5 text-xs text-gray-700">
             {r.conditions.map((c) => (

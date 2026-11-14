@@ -49,11 +49,20 @@ export function judgeProduct(product: Product, ctx: JudgeContext, all: Product[]
 
   const unmet = conditions.filter((c) => c.status === "unmet");
   const unknown = conditions.filter((c) => c.status === "unknown");
+  const signupClosed = product.newSignupClosed === true;
 
-  // 규칙: 미충족 1개라도 → 해당 없음 / 미충족 없고 모름 있음 → 확인 필요 / 모두 충족 → 가능
+  // 규칙
+  // 0. 신규 가입 종료 상품 → 조건과 상관없이 해당 없음
+  // 1. 미충족 1개라도 → 해당 없음 / 2. 미충족 없고 모름 있음 → 확인 필요 / 3. 모두 충족 → 가능
+  // ('신청 시 확인' 조건은 판정에 영향이 없어요)
   let status: JudgeStatus;
   let summaryReason: string;
-  if (unmet.length > 0) {
+  if (signupClosed) {
+    status = "ineligible";
+    summaryReason = product.signupClosedNote
+      ? `신규 가입이 종료된 상품이에요 (${product.signupClosedNote})`
+      : "신규 가입이 종료된 상품이에요";
+  } else if (unmet.length > 0) {
     status = "ineligible";
     summaryReason = unmet[0].reason;
   } else if (unknown.length > 0) {
@@ -74,7 +83,9 @@ export function judgeProduct(product: Product, ctx: JudgeContext, all: Product[]
     summaryReason,
     conditions,
     owned,
-    conflicts: owned ? [] : findConflicts(product, ctx.input, all),
+    signupClosed,
+    // 이미 가입했거나 신규 가입이 끝난 상품에는 중복 가입 경고를 띄우지 않아요
+    conflicts: owned || signupClosed ? [] : findConflicts(product, ctx.input, all),
   };
 }
 
