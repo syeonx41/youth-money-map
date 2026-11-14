@@ -11,7 +11,8 @@
  * - 조건 요약 줄: 만 나이 · 연소득 · 가구 형태 · 주택·세대주 · 가입 상품. 모름(null)은 빼요
  * - 카드 내용: 가능 → 충족 조건(신청 시 확인 조건 제외)·혜택 요약 1~2줄·신청 시 확인 조건 개수
  *             확인 필요 → 모름 조건·신청 시 확인 조건 개수 / 해당 없음 → summaryReason / 가입 중 → 없음
- * - 경고 띠: 가능·확인 필요 카드의 conflicts만 (해당 없음·가입 중 카드는 엔진이 줘도 안 보여줘요)
+ * - 경고 띠: 가능·확인 필요 카드의 conflicts만 (해당 없음·가입 중 카드는 엔진이 줘도 안 보여줘요).
+ *   상태 칩으로 거른 카드의 경고 띠만 보여줘요 (visibleWarnings)
  */
 import { formatManwon, manAge } from "@/lib/engine";
 import type {
@@ -48,11 +49,9 @@ export const STATUS_LABEL: Record<JudgeStatus, string> = {
 export type ResultCardKind = "owned" | "eligible" | "eligibleSwitch" | "needsCheck" | "ineligible";
 
 export const CARD_BADGE: Record<ResultCardKind, string> = {
+  ...STATUS_LABEL,
   owned: "가입 중",
-  eligible: "가능",
-  eligibleSwitch: "가능 · 전환 필요",
-  needsCheck: "확인 필요",
-  ineligible: "해당 없음",
+  eligibleSwitch: `${STATUS_LABEL.eligible} · 전환 필요`,
 };
 
 export interface ResultCard {
@@ -108,10 +107,8 @@ export interface ResultTab {
   /** 탭 숫자 = 이 탭에 보이는 카드 수 (가입 중 카드 포함, 숨긴 상품 제외) */
   count: number;
   chips: StatusChip[];
-  /** 정렬된 전체 카드. 칩 필터는 filterCards 로 걸러요 */
+  /** 정렬된 전체 카드. 칩 필터는 filterCards, 경고 띠는 visibleWarnings 로 골라요 */
   cards: ResultCard[];
-  /** 목록 위 경고 띠. 탭 안 가능·확인 필요 카드의 conflicts 를 카드 순서대로 */
-  warnings: ConflictBanner[];
 }
 
 export interface ResultView {
@@ -141,11 +138,21 @@ function josa(word: string, withFinal: string, withoutFinal: string): string {
   return word + (hasFinal ? withFinal : withoutFinal);
 }
 
+/**
+ * 경고 띠 문구. 엔진 message 와 뜻은 같고, 어느 상품 이야기인지 상품 이름을 앞에 붙여요.
+ * (엔진 message 는 조사가 받침과 안 맞을 때가 있어서 화면에서 다시 써요)
+ * - owned: 가입 중인 상품과 실제로 동시 가입이 안 돼요
+ * - unknown: 가입 여부를 몰라서 "가입 중이라면" 조건부로만 말해요
+ */
+export function conflictText(productName: string, c: Pick<ConflictWarning, "kind" | "conflictingProductName">): string {
+  const other = c.conflictingProductName;
+  return c.kind === "owned"
+    ? `${josa(productName, "은", "는")} 가입 중인 ${josa(other, "과", "와")} 동시에 가입할 수 없어요.`
+    : `${other}에 가입 중이라면 ${josa(productName, "과", "와")} 동시에 가입할 수 없어요. 가입 여부를 확인해 주세요.`;
+}
+
 function conflictBanner(productId: string, productName: string, c: ConflictWarning): ConflictBanner {
-  const text =
-    c.kind === "owned"
-      ? `${josa(productName, "은", "는")} 가입 중인 ${josa(c.conflictingProductName, "과", "와")} 동시에 가입할 수 없어요.`
-      : `${c.conflictingProductName}에 가입 중이라면 ${productName}에 동시에 가입할 수 없어요. 가입 여부를 확인해 주세요.`;
+  const text = conflictText(productName, c);
   return { productId, kind: c.kind, text, switchHref: c.switchGuide ? productHref(productId) : null };
 }
 
@@ -218,17 +225,21 @@ export function buildResultView(result: JudgeResponse, input: UserInput | null, 
       const count = tabCards.filter((c) => c.filterStatus === status).length;
       return { status, label: STATUS_LABEL[status], count, disabled: count === 0 };
     });
-    const warnings = tabCards.flatMap((c) => c.warnings);
-    return { id, label, count: tabCards.length, chips, cards: tabCards, warnings };
+    return { id, label, count: tabCards.length, chips, cards: tabCards };
   });
 
-  return { summary: input ? summarizeInput(input, result.judgedAt, products) : [], tabs };
+  return { summary: input ? summarizeInput(input, result.judgedAt, productById) : [], tabs };
 }
 
 /** 칩 필터 적용. filter 가 null 이면 전체(가입 중 카드 포함), 아니면 그 상태 카드만 */
 export function filterCards(tab: ResultTab, filter: JudgeStatus | null): ResultCard[] {
   if (filter === null) return tab.cards;
   return tab.cards.filter((c) => c.filterStatus === filter);
+}
+
+/** 목록 위 경고 띠: 칩 필터로 보이는 카드의 경고만, 카드 순서대로 */
+export function visibleWarnings(tab: ResultTab, filter: JudgeStatus | null): ConflictBanner[] {
+  return filterCards(tab, filter).flatMap((c) => c.warnings);
 }
 
 /** 칩을 누를 때: 같은 칩을 다시 누르면 해제 */
@@ -248,7 +259,11 @@ const HOUSEHOLD_LABEL: Record<HouseholdType, string> = {
 };
 
 /** 조건 요약 줄. 모름(null) 항목은 빼요. today 는 만 나이 계산 기준일(판정 기준일) */
-export function summarizeInput(input: UserInput, today: string, products: Product[]): string[] {
+export function summarizeInput(
+  input: UserInput,
+  today: string,
+  productById: ReadonlyMap<string, Pick<Product, "name">>,
+): string[] {
   const parts: string[] = [];
 
   const age = input.birthDate ? manAge(input.birthDate, today) : null;
@@ -267,7 +282,7 @@ export function summarizeInput(input: UserInput, today: string, products: Produc
   if (input.ownedProductIds !== null) {
     if (input.ownedProductIds.length === 0) parts.push("가입 상품 없음");
     else {
-      const names = input.ownedProductIds.map((id) => products.find((p) => p.id === id)?.name ?? id);
+      const names = input.ownedProductIds.map((id) => productById.get(id)?.name ?? id);
       parts.push(`가입: ${names.join(", ")}`);
     }
   }

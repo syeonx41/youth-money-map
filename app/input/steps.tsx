@@ -160,7 +160,7 @@ export function AgeStep({ draft, updateDraft, errors }: StepProps) {
               birth.ok ? "border-gray-200 bg-gray-50 text-gray-800" : "border-red-200 bg-red-50 text-red-700"
             }`}
           >
-            {birth.ok ? (age !== null && age >= 0 ? `→ 만 ${age}세로 계산돼요` : "→ 아직 태어나지 않은 날짜예요") : birth.error}
+            {birth.ok ? `→ 만 ${age}세로 계산돼요` : birth.error}
           </p>
         )}
       </div>
@@ -505,7 +505,7 @@ function CheckRow({
       : "border border-gray-300";
   return (
     <label className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-lg px-4 py-3 ${border}`}>
-      <input type="checkbox" checked={checked} onChange={onChange} className="size-5 shrink-0 accent-blue-600" />
+      <input type="checkbox" checked={checked} onChange={onChange} className="size-5 shrink-0 accent-gray-800" />
       <span className="flex flex-col text-sm">{children}</span>
     </label>
   );

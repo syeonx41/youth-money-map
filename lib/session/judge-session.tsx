@@ -27,6 +27,11 @@ export interface JudgeSession {
   /** 첫 화면에서 고른 탭. 결과 화면에서 먼저 열어요. 안 골랐으면 null */
   preferredTab: ProductCategory | null;
   setPreferredTab: (tab: ProductCategory | null) => void;
+  /**
+   * 처음부터 다시 시작: 선택값·입력값·판정 결과를 비우고 먼저 열 탭을 tab 으로 정해요.
+   * 첫 화면 버튼에서 써요. 결과 화면의 "조건 수정"은 선택값을 남겨야 하니 쓰지 않아요
+   */
+  resetSession: (tab?: ProductCategory | null) => void;
 }
 
 const JudgeSessionContext = createContext<JudgeSession | null>(null);
@@ -44,6 +49,12 @@ export function JudgeSessionProvider({ children }: { children: React.ReactNode }
     setJudgedState({ input, result });
   }, []);
 
+  const resetSession = useCallback((tab: ProductCategory | null = null) => {
+    setDraft(EMPTY_DRAFT);
+    setJudgedState(null);
+    setPreferredTab(tab);
+  }, []);
+
   const value = useMemo<JudgeSession>(
     () => ({
       draft,
@@ -53,8 +64,9 @@ export function JudgeSessionProvider({ children }: { children: React.ReactNode }
       setJudged,
       preferredTab,
       setPreferredTab,
+      resetSession,
     }),
-    [draft, updateDraft, judged, setJudged, preferredTab],
+    [draft, updateDraft, judged, setJudged, preferredTab, resetSession],
   );
 
   return <JudgeSessionContext.Provider value={value}>{children}</JudgeSessionContext.Provider>;

@@ -6,7 +6,14 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { products } from "@/lib/data";
-import { CHAT_HREF, buildResultView, filterCards, initialTab, toggleFilter } from "@/lib/result/result-view";
+import {
+  CHAT_HREF,
+  buildResultView,
+  filterCards,
+  initialTab,
+  toggleFilter,
+  visibleWarnings,
+} from "@/lib/result/result-view";
 import { useJudgeSession } from "@/lib/session/judge-session";
 import type { JudgeStatus, ProductCategory } from "@/types";
 import { ConflictBannerView, ResultCardView } from "./result-card";
@@ -38,6 +45,7 @@ export default function ResultPage() {
 
   const tab = view.tabs.find((t) => t.id === tabId) ?? view.tabs[0];
   const cards = filterCards(tab, filter);
+  const warnings = visibleWarnings(tab, filter);
 
   function selectTab(id: ProductCategory) {
     setTabId(id);
@@ -100,9 +108,9 @@ export default function ResultPage() {
           })}
         </div>
 
-        {tab.warnings.length > 0 && (
+        {warnings.length > 0 && (
           <ul className="flex flex-col gap-2">
-            {tab.warnings.map((banner) => (
+            {warnings.map((banner) => (
               <ConflictBannerView key={`${banner.productId}-${banner.text}`} banner={banner} />
             ))}
           </ul>

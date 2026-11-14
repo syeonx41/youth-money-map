@@ -23,7 +23,7 @@ export default function HomePage() {
           나에게 맞는 청년 금융상품 찾기
         </h1>
         <p className="text-sm leading-relaxed text-gray-600">
-          대출 · 적금 · 청약 상품을 한 화면에서 비교하고, 은행 우대금리와 정부지원금까지 합쳐서 보여드려요.
+          대출 · 적금 · 청약 상품을 한 화면에서 비교하고, 상품별 혜택과 정부지원 내용도 함께 보여드려요.
         </p>
 
         <StartButton />

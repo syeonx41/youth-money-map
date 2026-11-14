@@ -12,19 +12,37 @@ import {
   STEP_COUNT,
   draftToUserInput,
   errorsForStep,
+  firstStepWithErrors,
   parseStep,
   type DraftErrors,
+  type InputDraft,
 } from "@/lib/session/input-draft";
 import { useJudgeSession } from "@/lib/session/judge-session";
 import { AgeStep, HouseholdStep, HousingStep, IncomeStep, OwnedStep, type StepProps } from "./steps";
 
-const STEP_VIEWS: Record<number, (props: StepProps) => React.ReactNode> = {
-  1: AgeStep,
-  2: IncomeStep,
-  3: HouseholdStep,
-  4: HousingStep,
-  5: OwnedStep,
-};
+/** 단계 목록과 같은 길이의 화면 목록 */
+type StepViews<Steps extends readonly unknown[]> = { [I in keyof Steps]: (props: StepProps) => React.ReactNode };
+
+/** INPUT_STEPS 와 같은 순서·같은 개수 (개수가 다르면 타입 오류) */
+const STEP_VIEWS: StepViews<typeof INPUT_STEPS> = [
+  AgeStep,
+  IncomeStep,
+  HouseholdStep,
+  HousingStep,
+  OwnedStep,
+];
+
+/**
+ * 판정 요청 실패 종류
+ * - input: 4xx. 입력값 문제라 다시 시도해도 같아요
+ * - retry: 네트워크·5xx. 다시 시도할 수 있어요
+ */
+type RequestFailure = "input" | "retry";
+
+/** requestJudge 는 "판정 요청 실패 (상태코드)" 오류를 던져요. 4xx 면 input, 나머지는 retry */
+function failureKind(error: unknown): RequestFailure {
+  return error instanceof Error && /\(4\d\d\)/.test(error.message) ? "input" : "retry";
+}
 
 export default function InputPage() {
   return (
@@ -39,7 +57,7 @@ function InputFlow() {
   const step = parseStep(useSearchParams().get("step"));
   const { draft, updateDraft, setJudged } = useJudgeSession();
   const [errors, setErrors] = useState<DraftErrors>({});
-  const [requestFailed, setRequestFailed] = useState(false);
+  const [requestFailure, setRequestFailure] = useState<RequestFailure | null>(null);
   const [loading, setLoading] = useState(false);
 
   // 이 화면 안에서 쌓은 히스토리 수. 0 이면 "이전"이 뒤로가기 대신 이전 단계로 바꿔요
@@ -53,12 +71,26 @@ function InputFlow() {
     if (step < lastStep.current) depth.current = Math.max(0, depth.current - 1);
     lastStep.current = step;
     setErrors(carriedErrors.current ?? {});
+    // 실패 안내는 결과 보기를 누른 마지막 단계에서만 보여줘요
+    setRequestFailure(null);
     carriedErrors.current = null;
     window.scrollTo(0, 0);
   }, [step]);
 
   const isLast = step === STEP_COUNT;
-  const StepView = STEP_VIEWS[step];
+  const StepView = STEP_VIEWS[step - 1];
+
+  /** 입력을 고치면 그 칸의 오류 문구는 지워요 (다시 확인은 다음·결과 보기에서) */
+  function editDraft(patch: Partial<InputDraft>) {
+    updateDraft(patch);
+    setErrors((current) => {
+      const keys = Object.keys(patch) as (keyof InputDraft)[];
+      if (!keys.some((key) => current[key])) return current;
+      const next = { ...current };
+      for (const key of keys) delete next[key];
+      return next;
+    });
+  }
 
   function goBack() {
     if (depth.current > 0) router.back();
@@ -69,24 +101,25 @@ function InputFlow() {
     const converted = draftToUserInput(draft);
     if (!converted.ok) {
       // 주소로 바로 5단계에 들어와 생년월일이 없는 경우 등: 오류가 있는 첫 단계로 보내요
-      const firstBad =
-        INPUT_STEPS.find((s) => Object.keys(errorsForStep(converted.errors, s.step)).length > 0)?.step ?? step;
+      const firstBad = firstStepWithErrors(converted.errors) ?? step;
       const badErrors = errorsForStep(converted.errors, firstBad);
       if (firstBad === step) setErrors(badErrors);
       else {
         carriedErrors.current = badErrors;
-        router.push(`/input?step=${firstBad}`);
+        // 히스토리에 쌓지 않고 바꿔요. 이 단계부터는 "이전"이 뒤로가기 대신 바로 앞 단계로 가요
+        depth.current = 0;
+        router.replace(`/input?step=${firstBad}`);
       }
       return;
     }
-    setRequestFailed(false);
+    setRequestFailure(null);
     setLoading(true);
     try {
       const result = await requestJudge(converted.input);
       setJudged(converted.input, result);
       router.push("/result");
-    } catch {
-      setRequestFailed(true);
+    } catch (error) {
+      setRequestFailure(failureKind(error));
     } finally {
       setLoading(false);
     }
@@ -143,14 +176,19 @@ function InputFlow() {
       </div>
 
       <main className="flex flex-1 flex-col gap-6 px-5 py-6">
-        <StepView draft={draft} updateDraft={updateDraft} errors={errors} />
+        <StepView draft={draft} updateDraft={editDraft} errors={errors} />
         {step > 1 && (
           <p className="text-xs text-gray-500">생년월일 말고는 몰라도 괜찮아요. 고르지 않은 항목은 &apos;확인 필요&apos;로 표시돼요.</p>
         )}
       </main>
 
       <footer className="sticky bottom-0 flex flex-col gap-2 border-t border-gray-200 bg-white px-5 py-4">
-        {requestFailed && (
+        {isLast && requestFailure === "input" && (
+          <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+            판정할 수 없는 입력이에요. 입력값을 확인해 주세요.
+          </p>
+        )}
+        {isLast && requestFailure === "retry" && (
           <div role="alert" className="flex items-center justify-between gap-3 rounded-lg bg-red-50 px-4 py-3">
             <p className="text-sm text-red-700">판정 요청에 실패했어요. 잠시 후 다시 시도해 주세요.</p>
             <button

@@ -7,7 +7,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 export function latestAsOf(products: Pick<Product, "asOf">[]): string | null {
   let latest: string | null = null;
   for (const { asOf } of products) {
-    if (!DATE.test(asOf ?? "")) continue;
+    if (!DATE.test(asOf)) continue;
     // YYYY-MM-DD 는 문자열 비교가 날짜 비교와 같아요
     if (latest === null || asOf > latest) latest = asOf;
   }

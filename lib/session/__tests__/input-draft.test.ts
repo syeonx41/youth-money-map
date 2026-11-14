@@ -4,7 +4,9 @@ import {
   EMPTY_DRAFT,
   chooseOwned,
   draftToUserInput,
+  STEP_COUNT,
   errorsForStep,
+  firstStepWithErrors,
   parseBirthDigits,
   parseStep,
   toggleOwnedProduct,
@@ -34,6 +36,20 @@ describe("생년월일 8자리 → YYYY-MM-DD", () => {
     for (const digits of ["19990230", "19991301", "19990000", "19990431", "19990100"]) {
       expect(parseBirthDigits(digits).ok, digits).toBe(false);
     }
+  });
+
+  it("오늘보다 뒤 날짜는 '아직 태어나지 않은 날짜'로 거부해요", () => {
+    const today = "2026-11-13";
+    expect(parseBirthDigits("20261114", today)).toEqual({ ok: false, error: "아직 태어나지 않은 날짜예요" });
+    expect(parseBirthDigits("20300101", today)).toEqual({ ok: false, error: "아직 태어나지 않은 날짜예요" });
+    expect(parseBirthDigits("20261113", today)).toEqual({ ok: true, date: "2026-11-13" });
+    expect(parseBirthDigits("20261112", today)).toEqual({ ok: true, date: "2026-11-12" });
+  });
+
+  it("미래 생년월일이면 판정 입력을 만들지 않아요", () => {
+    const result = draftToUserInput({ ...EMPTY_DRAFT, birthDigits: "20261114" }, "2026-11-13");
+    expect(result).toEqual({ ok: false, errors: { birthDigits: "아직 태어나지 않은 날짜예요" } });
+    expect(draftToUserInput({ ...EMPTY_DRAFT, birthDigits: "20261113" }, "2026-11-13").ok).toBe(true);
   });
 
   it("빈칸·자릿수 틀림·숫자 아님은 거부해요", () => {
@@ -194,9 +210,11 @@ describe("가입 중인 상품", () => {
 });
 
 describe("단계", () => {
-  it("step 1~5 는 그대로, 이상한 값은 1", () => {
+  it("step 1~STEP_COUNT 는 그대로, 이상한 값은 1", () => {
+    expect(STEP_COUNT).toBe(5);
     expect(parseStep("3")).toBe(3);
-    expect(parseStep("5")).toBe(5);
+    expect(parseStep(String(STEP_COUNT))).toBe(STEP_COUNT);
+    expect(parseStep(String(STEP_COUNT + 1))).toBe(1);
     for (const value of [null, undefined, "", "0", "6", "2.5", "abc", "-1", "01"]) {
       expect(parseStep(value), String(value)).toBe(1);
     }
@@ -208,5 +226,11 @@ describe("단계", () => {
     expect(errorsForStep(errors, 2)).toEqual({ incomeText: "b" });
     expect(errorsForStep(errors, 3)).toEqual({ householdSizeText: "c" });
     expect(errorsForStep(errors, 4)).toEqual({});
+  });
+
+  it("오류가 있는 첫 단계를 찾아요", () => {
+    expect(firstStepWithErrors({ householdSizeText: "c", incomeText: "b" })).toBe(2);
+    expect(firstStepWithErrors({ ownedChoice: "x" })).toBe(5);
+    expect(firstStepWithErrors({})).toBeNull();
   });
 });

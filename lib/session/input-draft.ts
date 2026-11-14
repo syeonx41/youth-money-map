@@ -3,7 +3,7 @@
  *
  * 규칙 (spec "Implementation Decisions")
  * - 고르지 않은 항목(null·빈칸)과 '모름'("unknown") → null
- * - 생년월일만 필수: 8자리 숫자, 실제 있는 날짜
+ * - 생년월일만 필수: 8자리 숫자, 실제 있는 날짜, 오늘(한국 시간) 이전
  * - 쉼표·공백은 지우고 숫자로 바꿔요. 소득 없음 → 0
  * - 1인 가구 → 가구원 수 1, 가구소득 = 본인 연소득
  * - 가구원 수·가구소득: '모름'을 고르면 입력값과 상관없이 null
@@ -11,6 +11,7 @@
  * - 가입 상품: 체크한 상품 → id 목록, "없어요" → [], "잘 모르겠어요"·안 고름 → null
  * - 주거래 은행(mainBank)은 보내지 않아요
  */
+import { todayInSeoul } from "@/lib/engine";
 import type { EmploymentType, HouseholdType, Region, ResidenceType, UserInput } from "@/types";
 
 /** 선택지에서 '모름'을 고른 값 */
@@ -129,25 +130,33 @@ export const RESIDENCE_OPTIONS: readonly ChoiceOption<ResidenceType>[] = [
   { value: "other", label: "기타" },
 ];
 
-/** 입력 단계. 단계마다 확인하는 입력 칸이에요 */
+/** 입력 단계. 단계마다 확인하는 입력 칸이에요. 단계 번호는 배열 순서(1부터)예요 */
 export const INPUT_STEPS = [
-  { step: 1, name: "나이", fields: ["birthDigits", "region", "military", "militaryMonthsText"] },
-  { step: 2, name: "소득", fields: ["incomeText", "incomeChoice", "employment"] },
+  { name: "나이", fields: ["birthDigits", "region", "military", "militaryMonthsText"] },
+  { name: "소득", fields: ["incomeText", "incomeChoice", "employment"] },
   {
-    step: 3,
     name: "가구",
     fields: ["householdType", "householdSizeText", "householdIncomeText", "householdSizeChoice", "householdIncomeChoice"],
   },
-  { step: 4, name: "주택", fields: ["ownsHouse", "isHouseholdHead", "residence"] },
-  { step: 5, name: "가입 중인 상품", fields: ["ownedProductIds", "ownedChoice"] },
-] as const satisfies readonly { step: number; name: string; fields: readonly (keyof InputDraft)[] }[];
+  { name: "주택", fields: ["ownsHouse", "isHouseholdHead", "residence"] },
+  { name: "가입 중인 상품", fields: ["ownedProductIds", "ownedChoice"] },
+] as const satisfies readonly { name: string; fields: readonly (keyof InputDraft)[] }[];
 
 export const STEP_COUNT = INPUT_STEPS.length;
 
-/** URL 의 step 값 → 1~5. 이상한 값이면 1 */
+/** URL 의 step 값 → 1~STEP_COUNT. 이상한 값이면 1 */
 export function parseStep(value: string | null | undefined): number {
-  if (value && /^[1-5]$/.test(value)) return Number(value);
-  return 1;
+  if (!value || !/^[1-9]\d*$/.test(value)) return 1;
+  const step = Number(value);
+  return step >= 1 && step <= STEP_COUNT ? step : 1;
+}
+
+/** 오류가 있는 첫 단계 번호. 오류가 없으면 null */
+export function firstStepWithErrors(errors: DraftErrors): number | null {
+  for (let step = 1; step <= STEP_COUNT; step += 1) {
+    if (Object.keys(errorsForStep(errors, step)).length > 0) return step;
+  }
+  return null;
 }
 
 /** 오류 중 이 단계 입력 칸에 해당하는 것만 */
@@ -179,8 +188,14 @@ export type DraftErrors = Partial<Record<keyof InputDraft, string>>;
 
 export type DraftConversion = { ok: true; input: UserInput } | { ok: false; errors: DraftErrors };
 
-/** 생년월일 8자리 → "YYYY-MM-DD". 형식이 틀리거나 없는 날짜면 오류 문구 */
-export function parseBirthDigits(digits: string): { ok: true; date: string } | { ok: false; error: string } {
+/**
+ * 생년월일 8자리 → "YYYY-MM-DD". 형식이 틀리거나 없는 날짜, 오늘보다 뒤 날짜면 오류 문구
+ * @param today 기준일 "YYYY-MM-DD". 테스트에서 날짜를 고정할 때 넘겨요. 기본은 오늘(한국 시간)
+ */
+export function parseBirthDigits(
+  digits: string,
+  today: string = todayInSeoul(),
+): { ok: true; date: string } | { ok: false; error: string } {
   const value = digits.replace(/[\s.\-/]/g, "");
   if (value === "") return { ok: false, error: "생년월일을 입력해 주세요" };
   if (!/^\d{8}$/.test(value)) return { ok: false, error: "생년월일 8자리를 숫자로 입력해 주세요 (예: 19990315)" };
@@ -192,7 +207,11 @@ export function parseBirthDigits(digits: string): { ok: true; date: string } | {
   const real = date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
   if (y < 1900 || !real) return { ok: false, error: "없는 날짜예요. 생년월일을 다시 확인해 주세요" };
 
-  return { ok: true, date: `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}` };
+  const iso = `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`;
+  // YYYY-MM-DD 는 문자열 비교가 날짜 비교와 같아요
+  if (iso > today) return { ok: false, error: "아직 태어나지 않은 날짜예요" };
+
+  return { ok: true, date: iso };
 }
 
 /** 숫자 입력 칸: 빈칸 → null, 쉼표·공백 제거 후 0 이상 정수, 그 외 "invalid" */
@@ -213,11 +232,14 @@ function yesNo(choice: "yes" | "no" | UnknownChoice | null): boolean | null {
   return null;
 }
 
-/** 입력 화면 선택값을 판정 입력값으로 바꿔요 */
-export function draftToUserInput(draft: InputDraft): DraftConversion {
+/**
+ * 입력 화면 선택값을 판정 입력값으로 바꿔요
+ * @param today 생년월일 확인 기준일. 기본은 오늘(한국 시간)
+ */
+export function draftToUserInput(draft: InputDraft, today: string = todayInSeoul()): DraftConversion {
   const errors: DraftErrors = {};
 
-  const birth = parseBirthDigits(draft.birthDigits);
+  const birth = parseBirthDigits(draft.birthDigits, today);
   if (!birth.ok) errors.birthDigits = birth.error;
 
   let militaryMonths: number | null = null;

@@ -3,17 +3,20 @@
 import Link from "next/link";
 import type { ConflictBanner, ResultCard, ResultCardKind } from "@/lib/result/result-view";
 
+const ELIGIBLE_CARD = "border-2 border-gray-800 bg-white";
+const ELIGIBLE_BADGE = "bg-gray-800 text-white";
+
 const CARD_STYLE: Record<ResultCardKind, string> = {
-  eligible: "border-2 border-gray-800 bg-white",
-  eligibleSwitch: "border-2 border-gray-800 bg-white",
+  eligible: ELIGIBLE_CARD,
+  eligibleSwitch: ELIGIBLE_CARD,
   needsCheck: "border-2 border-dashed border-gray-500 bg-white",
   ineligible: "border border-gray-300 bg-gray-50 text-gray-500",
   owned: "border border-gray-300 bg-gray-100 text-gray-600",
 };
 
 const BADGE_STYLE: Record<ResultCardKind, string> = {
-  eligible: "bg-gray-800 text-white",
-  eligibleSwitch: "bg-gray-800 text-white",
+  eligible: ELIGIBLE_BADGE,
+  eligibleSwitch: ELIGIBLE_BADGE,
   needsCheck: "border border-dashed border-gray-600 text-gray-800",
   ineligible: "border border-gray-400 text-gray-500",
   owned: "border border-gray-400 text-gray-600",
@@ -36,8 +39,8 @@ export function ResultCardView({ card }: { card: ResultCard }) {
 
         {card.unknownLabels.length > 0 && (
           <ul className="flex flex-col gap-0.5 text-sm text-gray-800">
-            {card.unknownLabels.map((l) => (
-              <li key={l}>? {l} → 모름</li>
+            {card.unknownLabels.map((l, i) => (
+              <li key={i}>? {l} → 모름</li>
             ))}
           </ul>
         )}
@@ -50,8 +53,8 @@ export function ResultCardView({ card }: { card: ResultCard }) {
 
         {card.benefitLines.length > 0 && (
           <ul className="flex flex-col gap-0.5 text-sm text-gray-600">
-            {card.benefitLines.map((line) => (
-              <li key={line}>{line}</li>
+            {card.benefitLines.map((line, i) => (
+              <li key={i}>{line}</li>
             ))}
           </ul>
         )}

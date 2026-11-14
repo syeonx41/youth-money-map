@@ -12,12 +12,15 @@ import type { JudgeResponse, UserInput } from "@/types";
 import { TODAY } from "@/lib/engine/__tests__/fixtures";
 import profilesJson from "@/lib/engine/__tests__/profiles.json";
 import {
+  CARD_BADGE,
   buildResultView,
+  conflictText,
   filterCards,
   initialTab,
   productHref,
   summarizeInput,
   toggleFilter,
+  visibleWarnings,
   type ResultCard,
   type ResultTab,
   type ResultView,
@@ -198,7 +201,7 @@ describe("조건 요약 줄", () => {
       isHouseholdHead: false,
       ownedProductIds: null,
     };
-    expect(summarizeInput(input, TODAY, products)).toEqual(["만 27세", "소득 없음", "부모님과 함께", "세대원"]);
+    expect(summarizeInput(input, TODAY, new Map(products.map((p) => [p.id, p])))).toEqual(["만 27세", "소득 없음", "부모님과 함께", "세대원"]);
   });
 
   it("입력값이 없으면 요약 줄도 비어요", () => {
@@ -274,7 +277,7 @@ describe("경고 띠", () => {
   it("P02: 미래적금 '가능 · 전환 필요' + 경고 띠 + 갈아타기 순서 링크", () => {
     const saving = tab(viewOf("P02"), "saving");
     expect(saving.cards[0].badge).toBe("가능 · 전환 필요");
-    expect(saving.warnings).toEqual([
+    expect(visibleWarnings(saving, null)).toEqual([
       {
         productId: "youth-future-saving",
         kind: "owned",
@@ -286,21 +289,23 @@ describe("경고 띠", () => {
 
   it("P02: 충돌이 없는 탭에는 경고 띠가 없어요", () => {
     const view = viewOf("P02");
-    expect(tab(view, "loan").warnings).toEqual([]);
-    expect(tab(view, "housing").warnings).toEqual([]);
+    expect(visibleWarnings(tab(view, "loan"), null)).toEqual([]);
+    expect(visibleWarnings(tab(view, "housing"), null)).toEqual([]);
   });
 
   it("P08: 가입 여부 모름이면 확인 필요 카드 위에 '가입 중이라면' 안내", () => {
     const view = viewOf("P08");
-    const saving = tab(view, "saving");
-    expect(saving.warnings).toHaveLength(1);
-    expect(saving.warnings[0].kind).toBe("unknown");
-    expect(saving.warnings[0].text).toContain("청년도약계좌에 가입 중이라면");
+    const saving = visibleWarnings(tab(view, "saving"), null);
+    expect(saving).toHaveLength(1);
+    expect(saving[0].kind).toBe("unknown");
+    expect(saving[0].text).toBe(
+      "청년도약계좌에 가입 중이라면 청년미래적금과 동시에 가입할 수 없어요. 가입 여부를 확인해 주세요.",
+    );
     // 미래적금에는 도약계좌에서 갈아타는 안내가 있어서 링크도 보여줘요
-    expect(saving.warnings[0].switchHref).toBe("/products/youth-future-saving");
+    expect(saving[0].switchHref).toBe("/products/youth-future-saving");
 
     const loan = tab(view, "loan");
-    expect(loan.warnings.map((w) => [w.productId, w.kind, w.switchHref])).toEqual([["youth-rent-loan", "unknown", null]]);
+    expect(visibleWarnings(loan, null).map((w) => [w.productId, w.kind, w.switchHref])).toEqual([["youth-rent-loan", "unknown", null]]);
   });
 
   it("P08: 해당 없음 카드의 충돌은 엔진이 줘도 보여주지 않아요", () => {
@@ -309,6 +314,50 @@ describe("경고 띠", () => {
     expect(jeonse.kind).toBe("ineligible");
     expect(jeonse.judgement.conflicts.length).toBeGreaterThan(0);
     expect(jeonse.warnings).toEqual([]);
-    expect(tab(view, "loan").warnings.map((w) => w.productId)).not.toContain("youth-jeonse-loan");
+    expect(visibleWarnings(tab(view, "loan"), null).map((w) => w.productId)).not.toContain("youth-jeonse-loan");
+  });
+
+  it("상태 칩으로 거르면 보이는 카드의 경고 띠만 남아요", () => {
+    const loan = tab(viewOf("P08"), "loan");
+    const rent = loan.cards.find((c) => c.productId === "youth-rent-loan")!;
+    expect(rent.filterStatus).not.toBeNull();
+    expect(visibleWarnings(loan, rent.filterStatus).map((w) => w.productId)).toEqual(["youth-rent-loan"]);
+    for (const chip of loan.chips) {
+      const shown = visibleWarnings(loan, chip.status);
+      const cardIds = filterCards(loan, chip.status).map((c) => c.productId);
+      for (const w of shown) expect(cardIds).toContain(w.productId);
+      if (chip.status !== rent.filterStatus) expect(shown.map((w) => w.productId)).not.toContain("youth-rent-loan");
+    }
+  });
+});
+
+describe("경고 띠 문구", () => {
+  it("owned: 가입 중인 상품과 실제로 동시 가입이 안 된다고 말해요 (받침에 맞는 조사)", () => {
+    expect(conflictText("청년미래적금", { kind: "owned", conflictingProductName: "청년도약계좌" })).toBe(
+      "청년미래적금은 가입 중인 청년도약계좌와 동시에 가입할 수 없어요.",
+    );
+    expect(conflictText("청년도약계좌", { kind: "owned", conflictingProductName: "청년미래적금" })).toBe(
+      "청년도약계좌는 가입 중인 청년미래적금과 동시에 가입할 수 없어요.",
+    );
+  });
+
+  it("unknown: 가입 여부를 모르니 '가입 중이라면' 조건부로만 말해요", () => {
+    const text = conflictText("청년도약계좌", { kind: "unknown", conflictingProductName: "청년미래적금" });
+    expect(text).toBe("청년미래적금에 가입 중이라면 청년도약계좌와 동시에 가입할 수 없어요. 가입 여부를 확인해 주세요.");
+    expect(conflictText("청년미래적금", { kind: "unknown", conflictingProductName: "청년도약계좌" })).toContain(
+      "청년미래적금과 동시에",
+    );
+  });
+});
+
+describe("카드 배지", () => {
+  it("판정 배지는 상태 이름과 같아요", () => {
+    expect(CARD_BADGE).toEqual({
+      eligible: "가능",
+      needsCheck: "확인 필요",
+      ineligible: "해당 없음",
+      owned: "가입 중",
+      eligibleSwitch: "가능 · 전환 필요",
+    });
   });
 });
