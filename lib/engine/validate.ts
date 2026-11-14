@@ -2,6 +2,7 @@ import type { Condition, Product, UserInput } from "@/types";
 
 const CATEGORIES = ["loan", "saving", "housing"];
 const CONDITION_TYPES: Condition["type"][] = [
+  "checkAtApply",
   "age",
   "personalIncome",
   "householdIncomeRatio",
@@ -33,6 +34,8 @@ export function validateProducts(products: Product[]): string[] {
     if (!p.sourceUrl?.startsWith("http")) errors.push(`${at}: sourceUrl이 링크가 아니에요`);
     if (!DATE.test(p.asOf ?? "")) errors.push(`${at}: asOf는 YYYY-MM-DD 형식이에요`);
     if (!Array.isArray(p.benefits?.summary)) errors.push(`${at}: benefits.summary가 배열이 아니에요`);
+    if (p.newSignupClosed !== undefined && typeof p.newSignupClosed !== "boolean")
+      errors.push(`${at}: newSignupClosed는 true/false예요`);
     if (!Array.isArray(p.conditions) || p.conditions.length === 0) {
       errors.push(`${at}: conditions가 비어 있어요`);
     } else {
@@ -44,6 +47,9 @@ export function validateProducts(products: Product[]): string[] {
         condIds.add(c.id);
         if (!c.sourceText) errors.push(`${cat}: sourceText(공고 원문)가 비어 있어요`);
         if (c.type === "age" && !(c.min <= c.max)) errors.push(`${cat}: min이 max보다 커요`);
+        if (c.type === "householdIncomeRatio" && c.minPercent !== undefined && !(c.minPercent < c.maxPercent))
+          errors.push(`${cat}: minPercent가 maxPercent보다 작아야 해요`);
+        if (c.type === "checkAtApply" && !c.description) errors.push(`${cat}: description(화면 안내 문구)이 비어 있어요`);
       });
     }
     p.schedules?.forEach((s, j) => {

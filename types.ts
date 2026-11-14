@@ -100,10 +100,15 @@ export interface PersonalIncomeCondition extends ConditionBase {
   allowZero?: boolean;
 }
 
-/** 가구소득이 기준 중위소득의 몇 % 이하인지 */
+/**
+ * 가구소득이 기준 중위소득의 몇 % 이하인지.
+ * 하한이 있는 상품(예: 48% 초과~150% 이하)은 minPercent 를 넣어요. minPercent 는 "초과"예요.
+ */
 export interface HouseholdIncomeRatioCondition extends ConditionBase {
   type: "householdIncomeRatio";
   maxPercent: number;
+  /** 하한(%). 이 값을 "초과"해야 충족. 예: 48 → 48% 초과 */
+  minPercent?: number;
 }
 
 /** 가구 연소득 상한(만원). 부부 합산 기준 등 */
@@ -140,7 +145,18 @@ export interface ResidenceCondition extends ConditionBase {
   allowed: ResidenceType[];
 }
 
+/**
+ * 신청할 때 확인되는 조건 (순자산, 보증금, 주택 면적 등 입력받지 않는 조건).
+ * 판정에는 영향이 없고, 화면에 "신청할 때 확인돼요" 안내로만 보여줘요.
+ */
+export interface CheckAtApplyCondition extends ConditionBase {
+  type: "checkAtApply";
+  /** 화면에 보일 짧은 설명. 예: "순자산 3.45억원 이하" */
+  description: string;
+}
+
 export type Condition =
+  | CheckAtApplyCondition
   | AgeCondition
   | PersonalIncomeCondition
   | HouseholdIncomeRatioCondition
@@ -210,6 +226,13 @@ export interface Product {
   applyUrl: string; // 공식 신청 링크
   sourceUrl: string; // 공고 원문 링크
   asOf: string; // 정보 기준일 YYYY-MM-DD
+  /**
+   * 신규 가입이 끝난 상품. true 면 조건과 상관없이 '해당 없음 (신규 가입 종료)'으로 판정해요.
+   * 기존 가입자의 중복 가입·갈아타기 안내에는 계속 쓰여서 상품 목록에서 빼지 않아요.
+   */
+  newSignupClosed?: boolean;
+  /** 신규 가입 종료 안내 문구. 예: "2025년 12월 신규 가입 종료" */
+  signupClosedNote?: string;
   /** 챗봇(④)이 근거로 쓰는 공고 핵심 발췌 */
   noticeExcerpt?: string;
   /** 예시 데이터 표시. 실제 공고로 바꾸면 지워요 */
@@ -223,8 +246,11 @@ export interface Product {
 /** 상품 판정: 가능 / 확인 필요 / 해당 없음 */
 export type JudgeStatus = "eligible" | "needsCheck" | "ineligible";
 
-/** 조건 1개 판정: 충족 / 미충족 / 모름 */
-export type ConditionStatus = "met" | "unmet" | "unknown";
+/**
+ * 조건 1개 판정: 충족 / 미충족 / 모름 / 신청 시 확인
+ * - checkAtApply 는 판정에 영향이 없어요. 상세 화면(④)에서 "신청할 때 확인돼요"로 보여줘요.
+ */
+export type ConditionStatus = "met" | "unmet" | "unknown" | "checkAtApply";
 
 export interface ConditionResult {
   conditionId: string;
@@ -256,6 +282,8 @@ export interface ProductJudgement {
   conditions: ConditionResult[];
   /** 이미 가입 중인 상품인지 */
   owned: boolean;
+  /** 신규 가입이 끝난 상품인지. true 면 status 는 항상 ineligible (결과 화면에서 숨길지는 ③이 결정) */
+  signupClosed: boolean;
   conflicts: ConflictWarning[];
 }
 

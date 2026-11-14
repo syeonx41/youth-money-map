@@ -2,5 +2,11 @@
 export { judgeAll, judgeProduct, findConflicts, todayInSeoul } from "./judge";
 export { evaluateCondition, type JudgeContext } from "./conditions";
 export { manAge, ageAfterMilitary } from "./age";
-export { householdIncomeRatio, monthlyMedianIncome, formatManwon } from "./income";
+export {
+  householdIncomeRatio,
+  householdIncomeRatioExact,
+  formatRatio,
+  monthlyMedianIncome,
+  formatManwon,
+} from "./income";
 export { validateProducts, parseUserInput } from "./validate";

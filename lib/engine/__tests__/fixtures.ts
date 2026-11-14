@@ -89,3 +89,38 @@ export const LOCAL_SEOUL: Product = {
 };
 
 export const ALL = [SAVING_NEW, SAVING_OLD, LOAN_JEONSE, LOCAL_SEOUL];
+
+/** 신규 가입이 끝난 기존 적금 (청년도약계좌 같은 경우) */
+export const SAVING_OLD_CLOSED: Product = {
+  ...SAVING_OLD,
+  newSignupClosed: true,
+  signupClosedNote: "2025년 12월 신규 가입 종료",
+};
+
+/** 중위소득 하한이 있는 상품 (서울 청년월세처럼 48% 초과~150% 이하) + 신청 시 확인 조건 */
+export const RENT_WITH_RANGE: Product = {
+  ...base,
+  id: "rent-range",
+  name: "월세 지원",
+  category: "housing",
+  conditions: [
+    {
+      id: "hh",
+      type: "householdIncomeRatio",
+      label: "가구 소득",
+      minPercent: 48,
+      maxPercent: 150,
+      sourceText: "중위 48% 초과 150% 이하",
+    },
+    {
+      id: "deposit",
+      type: "checkAtApply",
+      label: "보증금",
+      description: "임차보증금 5,000만원 이하",
+      sourceText: "임차보증금 5천만원 이하",
+    },
+  ],
+};
+
+/** 엔진 수정 테스트용 상품 목록 */
+export const ALL_V2 = [SAVING_NEW, SAVING_OLD_CLOSED, LOAN_JEONSE, LOCAL_SEOUL, RENT_WITH_RANGE];

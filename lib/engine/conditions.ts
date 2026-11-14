@@ -8,7 +8,7 @@ import type {
   UserInput,
 } from "@/types";
 import { ageAfterMilitary, manAge } from "./age";
-import { formatManwon, householdIncomeRatio } from "./income";
+import { formatManwon, formatRatio, householdIncomeRatioExact } from "./income";
 
 export interface JudgeContext {
   input: UserInput;
@@ -109,20 +109,33 @@ export function evaluateCondition(condition: Condition, ctx: JudgeContext): Cond
     }
 
     case "householdIncomeRatio": {
-      const limit = `기준 중위소득 ${condition.maxPercent}% 이하`;
+      const { minPercent, maxPercent } = condition;
+      const limit =
+        minPercent !== undefined
+          ? `기준 중위소득 ${minPercent}% 초과~${maxPercent}% 이하`
+          : `기준 중위소득 ${maxPercent}% 이하`;
       if (input.householdIncome === null || input.householdSize === null) {
         return result(condition, "unknown", `가구소득이나 가구원 수를 몰라 가구 소득 조건(${limit}) 확인이 필요해요`);
       }
-      const ratio = householdIncomeRatio(ctx.medianIncome, input.householdIncome, input.householdSize);
-      if (ratio === null) {
+      // 비교는 반올림 전 값으로, 문구만 반올림해요
+      const exact = householdIncomeRatioExact(ctx.medianIncome, input.householdIncome, input.householdSize);
+      if (exact === null) {
         return result(condition, "unknown", `가구원 수를 확인할 수 없어 가구 소득 조건(${limit}) 확인이 필요해요`);
       }
-      const ok = ratio <= condition.maxPercent;
+      const overMin = minPercent === undefined || exact > minPercent;
+      const underMax = exact <= maxPercent;
+      const ok = overMin && underMax;
+      const shown = formatRatio(exact, minPercent === undefined ? [maxPercent] : [minPercent, maxPercent]);
+      const why = ok ? "" : !overMin ? " (하한 미달)" : " (상한 초과)";
       return result(
         condition,
         ok ? "met" : "unmet",
-        `${input.householdSize}인 가구, 연 ${formatManwon(input.householdIncome)} → 기준 중위소득 ${ratio}% (${limit}) ${metWord(ok)}`,
+        `${input.householdSize}인 가구, 연 ${formatManwon(input.householdIncome)} → 기준 중위소득 ${shown} (${limit}) ${metWord(ok)}${why}`,
       );
+    }
+
+    case "checkAtApply": {
+      return result(condition, "checkAtApply", `${condition.description} → 신청할 때 확인돼요`);
     }
 
     case "householdIncome": {
