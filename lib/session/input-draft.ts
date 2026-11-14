@@ -6,6 +6,7 @@
  * - 생년월일만 필수: 8자리 숫자, 실제 있는 날짜
  * - 쉼표·공백은 지우고 숫자로 바꿔요. 소득 없음 → 0
  * - 1인 가구 → 가구원 수 1, 가구소득 = 본인 연소득
+ * - 가구원 수·가구소득: '모름'을 고르면 입력값과 상관없이 null
  * - 병역: 해당 없음 → 0, 다녀왔어요 + 개월 수 → 숫자, 개월 수 빈칸 → null
  * - 가입 상품: 체크한 상품 → id 목록, "없어요" → [], "잘 모르겠어요"·안 고름 → null
  * - 주거래 은행(mainBank)은 보내지 않아요
@@ -39,6 +40,10 @@ export interface InputDraft {
   householdSizeText: string;
   /** 가구 전체 연소득(만원) 입력 그대로. 1인 가구면 안 써요 */
   householdIncomeText: string;
+  /** 가구원 수 '모름'. 고르면 householdSizeText 보다 우선해요 */
+  householdSizeChoice: UnknownChoice | null;
+  /** 가구 연소득 '모름'. 고르면 householdIncomeText 보다 우선해요 */
+  householdIncomeChoice: UnknownChoice | null;
 
   /* 4단계 주택 */
   ownsHouse: "yes" | "no" | UnknownChoice | null;
@@ -64,12 +69,110 @@ export const EMPTY_DRAFT: InputDraft = {
   householdType: null,
   householdSizeText: "",
   householdIncomeText: "",
+  householdSizeChoice: null,
+  householdIncomeChoice: null,
   ownsHouse: null,
   isHouseholdHead: null,
   residence: null,
   ownedProductIds: [],
   ownedChoice: null,
 };
+
+/* ------------------------------------------------------------------ */
+/* 화면 선택지. 입력 화면과 테스트(정답 프로필 입력 가능 여부)가 함께 써요 */
+/* ------------------------------------------------------------------ */
+
+export interface ChoiceOption<T extends string> {
+  value: T;
+  label: string;
+}
+
+/** 사는 지역: 17개 시·도 짧은 이름 (엔진·상품 데이터와 같은 값) */
+export const REGION_OPTIONS: readonly Region[] = [
+  "서울",
+  "부산",
+  "대구",
+  "인천",
+  "광주",
+  "대전",
+  "울산",
+  "세종",
+  "경기",
+  "강원",
+  "충북",
+  "충남",
+  "전북",
+  "전남",
+  "경북",
+  "경남",
+  "제주",
+];
+
+export const EMPLOYMENT_OPTIONS: readonly ChoiceOption<EmploymentType>[] = [
+  { value: "employee", label: "직장인" },
+  { value: "smeEmployee", label: "중소기업 재직" },
+  { value: "selfEmployed", label: "자영업" },
+  { value: "student", label: "학생·취준생" },
+  { value: "other", label: "기타" },
+];
+
+export const HOUSEHOLD_OPTIONS: readonly ChoiceOption<HouseholdType>[] = [
+  { value: "single", label: "혼자 살아요 (1인 가구)" },
+  { value: "withParents", label: "부모님과 함께 살아요" },
+  { value: "married", label: "결혼했어요 / 결혼 예정이에요" },
+];
+
+export const RESIDENCE_OPTIONS: readonly ChoiceOption<ResidenceType>[] = [
+  { value: "monthlyRent", label: "월세" },
+  { value: "jeonse", label: "전세 (예정 포함)" },
+  { value: "parents", label: "부모님 집" },
+  { value: "other", label: "기타" },
+];
+
+/** 입력 단계. 단계마다 확인하는 입력 칸이에요 */
+export const INPUT_STEPS = [
+  { step: 1, name: "나이", fields: ["birthDigits", "region", "military", "militaryMonthsText"] },
+  { step: 2, name: "소득", fields: ["incomeText", "incomeChoice", "employment"] },
+  {
+    step: 3,
+    name: "가구",
+    fields: ["householdType", "householdSizeText", "householdIncomeText", "householdSizeChoice", "householdIncomeChoice"],
+  },
+  { step: 4, name: "주택", fields: ["ownsHouse", "isHouseholdHead", "residence"] },
+  { step: 5, name: "가입 중인 상품", fields: ["ownedProductIds", "ownedChoice"] },
+] as const satisfies readonly { step: number; name: string; fields: readonly (keyof InputDraft)[] }[];
+
+export const STEP_COUNT = INPUT_STEPS.length;
+
+/** URL 의 step 값 → 1~5. 이상한 값이면 1 */
+export function parseStep(value: string | null | undefined): number {
+  if (value && /^[1-5]$/.test(value)) return Number(value);
+  return 1;
+}
+
+/** 오류 중 이 단계 입력 칸에 해당하는 것만 */
+export function errorsForStep(errors: DraftErrors, step: number): DraftErrors {
+  const fields: readonly (keyof InputDraft)[] = INPUT_STEPS[step - 1]?.fields ?? [];
+  const picked: DraftErrors = {};
+  for (const field of fields) if (errors[field]) picked[field] = errors[field];
+  return picked;
+}
+
+/** 5단계: 상품 체크를 켜고 끄기. 체크하면 "없어요"·"잘 모르겠어요" 선택이 풀려요 */
+export function toggleOwnedProduct(draft: InputDraft, productId: string): Partial<InputDraft> {
+  const checked = draft.ownedProductIds.includes(productId);
+  return {
+    ownedProductIds: checked
+      ? draft.ownedProductIds.filter((id) => id !== productId)
+      : [...draft.ownedProductIds, productId],
+    ownedChoice: null,
+  };
+}
+
+/** 5단계: "없어요"·"잘 모르겠어요" 고르기. 고르면 상품 체크가 모두 풀려요. 같은 걸 다시 누르면 선택 해제 */
+export function chooseOwned(draft: InputDraft, choice: "none" | UnknownChoice): Partial<InputDraft> {
+  return { ownedProductIds: [], ownedChoice: draft.ownedChoice === choice ? null : choice };
+}
 
 /** 입력 칸별 오류 문구 */
 export type DraftErrors = Partial<Record<keyof InputDraft, string>>;
@@ -140,12 +243,16 @@ export function draftToUserInput(draft: InputDraft): DraftConversion {
     householdSize = 1;
     householdIncome = annualIncome;
   } else {
-    const size = parseCount(draft.householdSizeText);
-    if (size === "invalid" || size === 0) errors.householdSizeText = "가구원 수를 1 이상 숫자로 입력해 주세요";
-    else householdSize = size;
-    const income = parseCount(draft.householdIncomeText);
-    if (income === "invalid") errors.householdIncomeText = "가구 연소득을 만원 단위 숫자로 입력해 주세요";
-    else householdIncome = income;
+    if (draft.householdSizeChoice !== "unknown") {
+      const size = parseCount(draft.householdSizeText);
+      if (size === "invalid" || size === 0) errors.householdSizeText = "가구원 수를 1 이상 숫자로 입력해 주세요";
+      else householdSize = size;
+    }
+    if (draft.householdIncomeChoice !== "unknown") {
+      const income = parseCount(draft.householdIncomeText);
+      if (income === "invalid") errors.householdIncomeText = "가구 연소득을 만원 단위 숫자로 입력해 주세요";
+      else householdIncome = income;
+    }
   }
 
   let ownedProductIds: string[] | null = null;
