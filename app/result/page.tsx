@@ -52,7 +52,7 @@ export default function ResultPage() {
           <SlidersIcon size={26} />
         </span>
         <h1 className="text-xl font-bold text-ink">조회 결과가 없어요</h1>
-        <p className="text-sm text-ink-soft">입력한 정보는 저장하지 않아요. 다시 입력해 주세요.</p>
+        <p className="text-sm text-ink-soft">입력한 정보는 저장하지 않아서 새로고침하면 사라져요. 조건을 다시 입력해 주세요.</p>
         <Link
           href="/input"
           className="mt-2 flex h-13 items-center rounded-2xl bg-go px-7 font-semibold text-white active:bg-go-deep"
@@ -162,7 +162,7 @@ export default function ResultPage() {
             ))}
           </ul>
         ) : (
-          <p className="py-10 text-center text-sm text-ink-mute">이 탭에 보여줄 상품이 없어요.</p>
+          <p className="py-10 text-center text-sm text-ink-mute">이 분류에 보여줄 상품이 없어요.</p>
         )}
 
         <p className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-ink-mute">

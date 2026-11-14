@@ -82,7 +82,7 @@ export function ResultCardView({ card }: { card: ResultCard }) {
         {/* 확인 필요: 모른다고 넘긴 조건 */}
         {card.unknownLabels.length > 0 && (
           <div className="flex flex-col gap-2 rounded-xl bg-check-soft px-3 py-3">
-            <p className="text-[13px] font-semibold text-check">아직 모르는 조건 {card.unknownLabels.length}개</p>
+            <p className="text-[13px] font-semibold text-check">확인이 필요한 조건 {card.unknownLabels.length}개</p>
             <ul className="flex flex-wrap gap-1.5">
               {card.unknownLabels.map((label, i) => (
                 <li
@@ -93,7 +93,7 @@ export function ResultCardView({ card }: { card: ResultCard }) {
                 </li>
               ))}
             </ul>
-            <p className="text-xs leading-relaxed text-check">이 조건을 알아보고 입력하면 판정이 정해져요.</p>
+            <p className="text-xs leading-relaxed text-check">이 조건을 확인해 입력하면 결과가 확정돼요.</p>
           </div>
         )}
 
@@ -102,7 +102,7 @@ export function ResultCardView({ card }: { card: ResultCard }) {
           <div className="flex flex-col gap-1.5 text-sm text-ink-soft">
             <p>{card.reason}</p>
             <span className="flex items-center gap-0.5 font-medium text-ink">
-              왜 안 되는지 보기
+              자세한 이유 보기
               <ChevronRightIcon size={16} />
             </span>
           </div>
@@ -120,7 +120,7 @@ export function ResultCardView({ card }: { card: ResultCard }) {
         {card.checkAtApplyCount > 0 && (
           <p className="flex items-center gap-1.5 text-xs text-ink-mute">
             <ClipboardCheckIcon size={15} />
-            신청할 때 확인할 조건 {card.checkAtApplyCount}개
+            신청 시 확인할 조건 {card.checkAtApplyCount}개
           </p>
         )}
       </Link>

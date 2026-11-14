@@ -190,10 +190,10 @@ export function AgeStep({ draft, updateDraft, errors }: StepProps) {
 
   return (
     <>
-      <StepTitle title="생년월일을 알려주세요" description="만 나이로 자동 계산해요. 병역 기간은 아래에서 따로 받아요." />
+      <StepTitle title="생년월일과 사는 지역을 알려주세요" description="생년월일은 만 나이로 자동 계산해요." />
 
       <div className="flex flex-col gap-2">
-        <FieldLabel htmlFor="birth">생년월일 (8자리)</FieldLabel>
+        <FieldLabel htmlFor="birth">생년월일 8자리</FieldLabel>
         <NumberInput
           id="birth"
           maxLength={8}
@@ -218,7 +218,7 @@ export function AgeStep({ draft, updateDraft, errors }: StepProps) {
       <div className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between">
           <FieldLabel>사는 지역</FieldLabel>
-          <span className="text-xs text-ink-mute">지도나 아래 버튼에서 골라요</span>
+          <span className="text-xs text-ink-mute">지도나 아래 버튼에서 선택</span>
         </div>
         <div className="rounded-2xl bg-sea px-4 pt-5 pb-2">
           <div className="mx-auto max-w-[270px]">
@@ -248,19 +248,20 @@ export function AgeStep({ draft, updateDraft, errors }: StepProps) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <FieldLabel>병역 이행 기간 (선택)</FieldLabel>
+        <FieldLabel>병역 사항 (선택)</FieldLabel>
+        <p className="text-[13px] text-ink-mute">미필·면제·비대상은 &apos;해당 없음&apos;이에요.</p>
         <div className="grid grid-cols-3 gap-2">
+          <Choice
+            selected={draft.military === "served"}
+            onClick={() => updateDraft({ military: toggle(draft.military, "served") })}
+          >
+            병역필
+          </Choice>
           <Choice
             selected={draft.military === "none"}
             onClick={() => updateDraft({ military: toggle(draft.military, "none") })}
           >
             해당 없음
-          </Choice>
-          <Choice
-            selected={draft.military === "served"}
-            onClick={() => updateDraft({ military: toggle(draft.military, "served") })}
-          >
-            다녀왔어요
           </Choice>
           <Choice
             unknown
@@ -272,7 +273,9 @@ export function AgeStep({ draft, updateDraft, errors }: StepProps) {
         </div>
         {draft.military === "served" && (
           <>
-            <FieldLabel htmlFor="military-months">복무 기간 (개월)</FieldLabel>
+            <div className="mt-2">
+              <FieldLabel htmlFor="military-months">복무 기간</FieldLabel>
+            </div>
             <NumberInput
               id="military-months"
               maxLength={3}
@@ -283,7 +286,7 @@ export function AgeStep({ draft, updateDraft, errors }: StepProps) {
               error={errors.militaryMonthsText}
             />
             <p className="text-[13px] leading-relaxed text-ink-mute">
-              일부 상품은 나이 계산에서 복무 기간을 빼줘요. 모르면 비워두세요. &apos;확인 필요&apos;로 표시돼요.
+              일부 상품은 나이를 계산할 때 복무 기간만큼 빼 줘요. 모르면 비워 두세요. &apos;확인 필요&apos;로 표시돼요.
             </p>
           </>
         )}
@@ -299,10 +302,10 @@ export function AgeStep({ draft, updateDraft, errors }: StepProps) {
 export function IncomeStep({ draft, updateDraft, errors }: StepProps) {
   return (
     <>
-      <StepTitle title="작년 연소득이 어느 정도인가요?" description="세전 기준이에요. 정확하지 않아도 괜찮아요." />
+      <StepTitle title="작년 연소득을 알려주세요" description="세전 기준이에요. 대략적인 금액이어도 괜찮아요." />
 
       <div className="flex flex-col gap-2">
-        <FieldLabel htmlFor="income">연소득 (만원)</FieldLabel>
+        <FieldLabel htmlFor="income">연소득</FieldLabel>
         <NumberInput
           id="income"
           allowComma
@@ -318,7 +321,7 @@ export function IncomeStep({ draft, updateDraft, errors }: StepProps) {
           onClick={() => updateDraft({ incomeChoice: toggle(draft.incomeChoice, "none"), incomeText: "" })}
           className="justify-start px-4"
         >
-          소득 없음 (학생, 취준생)
+          소득 없음 (학생·취준생 등)
         </Choice>
         <Choice
           unknown
@@ -331,8 +334,8 @@ export function IncomeStep({ draft, updateDraft, errors }: StepProps) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <FieldLabel>일하는 형태</FieldLabel>
-        <p className="text-[13px] text-ink-mute">우대금리와 지원금 판정에 써요.</p>
+        <FieldLabel>취업 상태</FieldLabel>
+        <p className="text-[13px] text-ink-mute">우대금리와 정부지원금 판정에 써요.</p>
         <div className="grid grid-cols-2 gap-2">
           {EMPLOYMENT_OPTIONS.map((option) => (
             <Choice
@@ -378,7 +381,7 @@ export function HouseholdStep({ draft, updateDraft, errors }: StepProps) {
 
   return (
     <>
-      <StepTitle title="지금 누구와 살고 있나요?" description="가구 소득 기준이 있는 상품 판정에 써요." />
+      <StepTitle title="가구 상황을 알려주세요" description="가구 소득 기준이 있는 상품 판정에 써요." />
 
       <div className="flex flex-col gap-2">
         {HOUSEHOLD_OPTIONS.map((option) => (
@@ -398,7 +401,7 @@ export function HouseholdStep({ draft, updateDraft, errors }: StepProps) {
           onClick={() => updateDraft({ householdType: toggle(draft.householdType, "unknown") })}
           className="justify-start px-4"
         >
-          모름 / 기타
+          기타·모름
         </Choice>
       </div>
 
@@ -407,7 +410,7 @@ export function HouseholdStep({ draft, updateDraft, errors }: StepProps) {
       ) : (
         <>
           <div className="flex flex-col gap-2">
-            <FieldLabel htmlFor="household-size">가구원 수 (본인 포함, 명)</FieldLabel>
+            <FieldLabel htmlFor="household-size">가구원 수 (본인 포함)</FieldLabel>
             <div className="flex gap-2">
               <div className="flex flex-1 flex-col gap-2">
                 <NumberInput
@@ -435,7 +438,7 @@ export function HouseholdStep({ draft, updateDraft, errors }: StepProps) {
           </div>
 
           <div className="flex flex-col gap-2">
-            <FieldLabel htmlFor="household-income">가구 전체 연소득 (만원)</FieldLabel>
+            <FieldLabel htmlFor="household-income">가구 전체 연소득</FieldLabel>
             <div className="flex gap-2">
               <div className="flex flex-1 flex-col gap-2">
                 <NumberInput
@@ -443,7 +446,7 @@ export function HouseholdStep({ draft, updateDraft, errors }: StepProps) {
                   allowComma
                   maxLength={9}
                   unit="만원"
-                  placeholder="모르면 비워두세요"
+                  placeholder="예: 6000"
                   value={draft.householdIncomeChoice === "unknown" ? "" : draft.householdIncomeText}
                   disabled={draft.householdIncomeChoice === "unknown"}
                   onChange={(householdIncomeText) => updateDraft({ householdIncomeText })}
@@ -504,34 +507,34 @@ function YesNoUnknown({
 export function HousingStep({ draft, updateDraft }: StepProps) {
   return (
     <>
-      <StepTitle title="집이 있나요?" description="청약과 전세대출 판정에 써요." />
+      <StepTitle title="주택과 거주 상황을 알려주세요" description="청약과 전세대출 판정에 써요." />
 
       <div className="flex flex-col gap-2">
         <FieldLabel>본인 명의 주택</FieldLabel>
         <YesNoUnknown
           value={draft.ownsHouse}
           options={[
-            { value: "no", label: "없음" },
-            { value: "yes", label: "있음" },
+            { value: "no", label: "무주택" },
+            { value: "yes", label: "보유" },
           ]}
           onChange={(ownsHouse) => updateDraft({ ownsHouse })}
         />
       </div>
 
       <div className="flex flex-col gap-2">
-        <FieldLabel>세대주인가요?</FieldLabel>
+        <FieldLabel>세대주 여부</FieldLabel>
         <YesNoUnknown
           value={draft.isHouseholdHead}
           options={[
-            { value: "yes", label: "예" },
-            { value: "no", label: "아니오" },
+            { value: "yes", label: "세대주" },
+            { value: "no", label: "세대원" },
           ]}
           onChange={(isHouseholdHead) => updateDraft({ isHouseholdHead })}
         />
       </div>
 
       <div className="flex flex-col gap-2">
-        <FieldLabel>지금 사는 형태</FieldLabel>
+        <FieldLabel>현재 거주 형태</FieldLabel>
         <div className="grid grid-cols-2 gap-2">
           {RESIDENCE_OPTIONS.map((option) => (
             <Choice
@@ -553,7 +556,7 @@ export function HousingStep({ draft, updateDraft }: StepProps) {
         </div>
       </div>
 
-      <Note>세대주는 주민등록상 가구의 대표자예요. 등본에서 확인할 수 있어요.</Note>
+      <Note>세대주는 주민등록상 세대의 대표자예요. 주민등록등본에서 확인할 수 있어요.</Note>
     </>
   );
 }
@@ -570,7 +573,7 @@ function CheckRow({
   children,
 }: {
   checked: boolean;
-  /** "없어요"·"잘 모르겠어요" 처럼 상품이 아닌 선택지 */
+  /** "가입한 상품 없음"·"모름" 처럼 상품이 아닌 선택지 */
   unknown?: boolean;
   onChange: () => void;
   /** 왼쪽 상품 그림 */
@@ -600,8 +603,8 @@ export function OwnedStep({ draft, updateDraft }: StepProps) {
   return (
     <>
       <StepTitle
-        title="이미 가입한 상품이 있나요?"
-        description="중복 가입 제한과 갈아타기 순서를 알려드릴게요. 여러 개 고를 수 있어요."
+        title="이미 가입한 상품을 알려주세요"
+        description="중복 가입 제한과 갈아타기 순서를 알려드려요. 여러 개 선택할 수 있어요."
       />
 
       <div className="flex flex-col gap-2">
@@ -619,15 +622,15 @@ export function OwnedStep({ draft, updateDraft }: StepProps) {
           </CheckRow>
         ))}
         <CheckRow unknown checked={draft.ownedChoice === "none"} onChange={() => updateDraft(chooseOwned(draft, "none"))}>
-          없어요
+          가입한 상품 없음
         </CheckRow>
         <CheckRow
           unknown
           checked={draft.ownedChoice === "unknown"}
           onChange={() => updateDraft(chooseOwned(draft, "unknown"))}
         >
-          <span>잘 모르겠어요</span>
-          <span className="text-xs text-ink-mute">결과에서 동시 가입 제한을 확인하라고 알려드려요</span>
+          <span>모름</span>
+          <span className="text-xs text-ink-mute">결과 화면에서 동시 가입 제한을 함께 안내해요</span>
         </CheckRow>
       </div>
     </>

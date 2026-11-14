@@ -8,7 +8,7 @@
  * - 1인 가구 → 가구원 수 1, 가구소득 = 본인 연소득
  * - 가구원 수·가구소득: '모름'을 고르면 입력값과 상관없이 null
  * - 병역: 해당 없음 → 0, 다녀왔어요 + 개월 수 → 숫자, 개월 수 빈칸 → null
- * - 가입 상품: 체크한 상품 → id 목록, "없어요" → [], "잘 모르겠어요"·안 고름 → null
+ * - 가입 상품: 체크한 상품 → id 목록, "가입한 상품 없음" → [], "모름"·안 고름 → null
  * - 주거래 은행(mainBank)은 보내지 않아요
  */
 import { todayInSeoul } from "@/lib/engine";
@@ -54,7 +54,7 @@ export interface InputDraft {
   /* 5단계 가입 중인 상품 */
   /** 체크한 상품 id */
   ownedProductIds: string[];
-  /** "없어요"([]) / "잘 모르겠어요"(null). 상품을 체크하면 무시해요 */
+  /** "가입한 상품 없음"([]) / "모름"(null). 상품을 체크하면 무시해요 */
   ownedChoice: "none" | UnknownChoice | null;
 }
 
@@ -118,15 +118,15 @@ export const EMPLOYMENT_OPTIONS: readonly ChoiceOption<EmploymentType>[] = [
 ];
 
 export const HOUSEHOLD_OPTIONS: readonly ChoiceOption<HouseholdType>[] = [
-  { value: "single", label: "혼자 살아요 (1인 가구)" },
-  { value: "withParents", label: "부모님과 함께 살아요" },
-  { value: "married", label: "결혼했어요 / 결혼 예정이에요" },
+  { value: "single", label: "1인 가구" },
+  { value: "withParents", label: "부모님과 함께 거주" },
+  { value: "married", label: "기혼 또는 결혼 예정" },
 ];
 
 export const RESIDENCE_OPTIONS: readonly ChoiceOption<ResidenceType>[] = [
   { value: "monthlyRent", label: "월세" },
   { value: "jeonse", label: "전세 (예정 포함)" },
-  { value: "parents", label: "부모님 집" },
+  { value: "parents", label: "부모님 집 거주" },
   { value: "other", label: "기타" },
 ];
 
@@ -167,7 +167,7 @@ export function errorsForStep(errors: DraftErrors, step: number): DraftErrors {
   return picked;
 }
 
-/** 5단계: 상품 체크를 켜고 끄기. 체크하면 "없어요"·"잘 모르겠어요" 선택이 풀려요 */
+/** 5단계: 상품 체크를 켜고 끄기. 체크하면 "가입한 상품 없음"·"모름" 선택이 풀려요 */
 export function toggleOwnedProduct(draft: InputDraft, productId: string): Partial<InputDraft> {
   const checked = draft.ownedProductIds.includes(productId);
   return {
@@ -178,7 +178,7 @@ export function toggleOwnedProduct(draft: InputDraft, productId: string): Partia
   };
 }
 
-/** 5단계: "없어요"·"잘 모르겠어요" 고르기. 고르면 상품 체크가 모두 풀려요. 같은 걸 다시 누르면 선택 해제 */
+/** 5단계: "가입한 상품 없음"·"모름" 고르기. 고르면 상품 체크가 모두 풀려요. 같은 걸 다시 누르면 선택 해제 */
 export function chooseOwned(draft: InputDraft, choice: "none" | UnknownChoice): Partial<InputDraft> {
   return { ownedProductIds: [], ownedChoice: draft.ownedChoice === choice ? null : choice };
 }

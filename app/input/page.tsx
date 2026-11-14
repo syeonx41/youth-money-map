@@ -209,7 +209,7 @@ function InputFlow() {
         {step > 1 && (
           <p className="flex items-start gap-2 text-[13px] leading-relaxed text-ink-mute">
             <InfoIcon size={16} className="mt-0.5" />
-            생년월일 말고는 몰라도 괜찮아요. 고르지 않은 항목은 &apos;확인 필요&apos;로 표시돼요.
+            생년월일 외 항목은 몰라도 괜찮아요. 비워 두면 &apos;확인 필요&apos;로 표시돼요.
           </p>
         )}
       </main>
@@ -218,12 +218,12 @@ function InputFlow() {
         {isLast && requestFailure === "input" && (
           <p role="alert" className="flex items-start gap-2 rounded-xl bg-bad-soft px-4 py-3 text-sm text-bad">
             <AlertIcon size={18} className="mt-0.5" />
-            판정할 수 없는 입력이에요. 입력값을 확인해 주세요.
+            판정할 수 없는 입력값이 있어요. 입력한 내용을 확인해 주세요.
           </p>
         )}
         {isLast && requestFailure === "retry" && (
           <div role="alert" className="flex items-center justify-between gap-3 rounded-xl bg-bad-soft px-4 py-3">
-            <p className="text-sm text-bad">판정 요청에 실패했어요. 잠시 후 다시 시도해 주세요.</p>
+            <p className="text-sm text-bad">결과를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
             <button
               type="button"
               onClick={() => void judge()}
@@ -249,7 +249,7 @@ function InputFlow() {
             disabled={loading}
             className="h-13 rounded-2xl bg-go text-base font-semibold text-white active:bg-go-deep disabled:opacity-60"
           >
-            {isLast ? (loading ? "판정하는 중…" : "결과 보기") : "다음"}
+            {isLast ? (loading ? "결과 확인 중…" : "결과 보기") : "다음"}
           </button>
         </div>
       </footer>

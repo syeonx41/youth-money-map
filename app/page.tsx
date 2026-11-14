@@ -10,16 +10,16 @@ import { KoreaSilhouette } from "./ui/korea-map";
 import { STATUS_DOT, STATUS_ICON } from "./ui/status";
 
 const NOTICES = [
-  { Icon: UserIcon, text: "로그인 없이 이용" },
+  { Icon: UserIcon, text: "로그인 없이 바로 이용" },
   { Icon: LockIcon, text: "입력 정보는 저장하지 않아요" },
-  { Icon: ExternalIcon, text: "실제 신청은 공식 신청처로 연결" },
+  { Icon: ExternalIcon, text: "신청은 공식 신청처에서 진행" },
 ];
 
 /** 판정 결과가 무슨 뜻인지 (README 판정 규칙) */
 const STATUS_MEANING: Record<JudgeStatus, string> = {
   eligible: "입력한 조건을 모두 충족해요",
-  needsCheck: "모르는 조건이 남아 있어요",
-  ineligible: "충족하지 못한 조건이 있어요",
+  needsCheck: "'모름'으로 둔 조건이 있어요",
+  ineligible: "충족하지 않는 조건이 있어요",
 };
 
 export default function HomePage() {

@@ -76,7 +76,7 @@ export interface ResultCard {
   reason: string | null;
   /** 혜택 요약 최대 2줄 (benefits.summary). 가능 카드만 */
   benefitLines: string[];
-  /** "신청할 때 확인할 조건 N개". 가능·확인 필요 카드만 세고, 나머지는 0 */
+  /** "신청 시 확인할 조건 N개". 가능·확인 필요 카드만 세고, 나머지는 0 */
   checkAtApplyCount: number;
   /** 이 카드에서 나온 경고 띠. 가능·확인 필요 카드만 */
   warnings: ConflictBanner[];
