@@ -306,7 +306,8 @@ function ConflictBlock({ productName, conflict }: { productName: string; conflic
     >
       <p>{conflictText(productName, conflict)}</p>
       {guide && (
-        <details className="group mt-2">
+        // 결과 화면의 "갈아타기 순서 보기"로 들어오면 순서가 바로 보이도록 펼쳐 둬요 (접을 수는 있어요)
+        <details open className="group mt-2">
           <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1 font-semibold text-check">
             {conflict.conflictingProductName}에서 갈아타는 순서
             <ChevronRightIcon size={16} className="transition-transform group-open:rotate-90" />
