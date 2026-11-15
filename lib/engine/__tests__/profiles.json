@@ -22,15 +22,10 @@
       "youth-jeonse-loan": "ineligible",
       "youth-rent-loan": "eligible",
       "sunshine-loan-youth": "eligible",
-      "seoul-youth-rent": "eligible"
+      "seoul-youth-rent": "eligible",
+      "youth-leap-account": "ineligible"
     },
-    "expectedConflicts": [],
-    "pending": {
-      "youth-leap-account": {
-        "expected": "ineligible",
-        "reason": "청년도약계좌는 2025년 12월 신규 가입 종료. 중복 가입 안내 때문에 상품 목록에는 있어야 하지만, 신규 가입 종료를 표현할 필드가 없어 '가능'으로 나올 수 있음"
-      }
-    }
+    "expectedConflicts": []
   },
   {
     "id": "P02",
@@ -229,7 +224,6 @@
     "expectedConflicts": [
       "youth-future-saving",
       "youth-jeonse-loan",
-      "youth-leap-account",
       "youth-rent-loan"
     ]
   },
@@ -395,7 +389,6 @@
       "seoul-youth-rent": "ineligible"
     },
     "expectedConflicts": [
-      "youth-leap-account",
       "youth-rent-loan"
     ],
     "expectedOwned": [
@@ -425,15 +418,10 @@
       "youth-housing-dream": "eligible",
       "youth-jeonse-loan": "ineligible",
       "youth-rent-loan": "eligible",
-      "sunshine-loan-youth": "eligible"
+      "sunshine-loan-youth": "eligible",
+      "seoul-youth-rent": "ineligible"
     },
-    "expectedConflicts": [],
-    "pending": {
-      "seoul-youth-rent": {
-        "expected": "ineligible",
-        "reason": "공고: 중위소득 48% 초과~150% 이하. 엔진·types.ts에 하한(minPercent)이 없어 지금은 '가능'으로 나옴"
-      }
-    }
+    "expectedConflicts": []
   },
   {
     "id": "P16",
@@ -538,15 +526,10 @@
       "youth-housing-dream": "eligible",
       "youth-jeonse-loan": "ineligible",
       "youth-rent-loan": "eligible",
-      "sunshine-loan-youth": "ineligible"
+      "sunshine-loan-youth": "ineligible",
+      "seoul-youth-rent": "ineligible"
     },
-    "expectedConflicts": [],
-    "pending": {
-      "seoul-youth-rent": {
-        "expected": "ineligible",
-        "reason": "150.01%인데 엔진이 비율을 소수 첫째 자리로 반올림(150.0)한 뒤 비교해서 '가능'으로 나옴. 비교는 반올림 전 값으로 해야 함"
-      }
-    }
+    "expectedConflicts": []
   },
   {
     "id": "P20",
