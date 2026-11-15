@@ -111,10 +111,13 @@ describe("POST /api/chat (④, Claude 는 가짜로 대체)", () => {
     vi.resetModules();
     create.mockReset();
     vi.doMock("@anthropic-ai/sdk", async (orig) => {
-      const real = (await orig()) as { default: { RateLimitError: unknown; APIError: unknown } };
+      const real = (await orig()) as {
+        default: { RateLimitError: unknown; APIError: unknown; APIConnectionTimeoutError: unknown };
+      };
       class FakeAnthropic {
         static RateLimitError = real.default.RateLimitError;
         static APIError = real.default.APIError;
+        static APIConnectionTimeoutError = real.default.APIConnectionTimeoutError;
         beta = { messages: { create } };
       }
       return { default: FakeAnthropic };
@@ -174,6 +177,14 @@ describe("POST /api/chat (④, Claude 는 가짜로 대체)", () => {
     create.mockResolvedValue({ stop_reason: "refusal", content: [] });
     const res = await post({ productId: null, judgements: [], messages: ask("질문") });
     expect(res.status).toBe(422);
+  });
+
+  it("Claude 응답이 너무 오래 걸리면 504 (배포 시간 제한 전에 끝냄)", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "test-key");
+    const { default: RealAnthropic } = await vi.importActual<typeof import("@anthropic-ai/sdk")>("@anthropic-ai/sdk");
+    create.mockRejectedValue(new RealAnthropic.APIConnectionTimeoutError());
+    const res = await post({ productId: null, judgements: [], messages: ask("질문") });
+    expect(res.status).toBe(504);
   });
 
   it("형식이 깨진 답변이면 502", async () => {
