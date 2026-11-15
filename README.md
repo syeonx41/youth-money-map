@@ -31,6 +31,9 @@ Next.js(App Router) · TypeScript · Tailwind CSS · Vitest · Vercel 배포
 | `data/median-income.json` | 기준 중위소득 표 | ② |
 | `lib/calc/` | 금리·수령액 계산 (추가 목표) | ② |
 | `app/page.tsx`, `app/input/`, `app/result/` | 첫 화면, 조건 입력, 결과 | ③ |
+| `lib/session/` | 화면 사이 입력값·판정 결과 공유(`useJudgeSession`, 메모리에만 저장, ④도 사용), 입력값 변환 | ③ |
+| `lib/result/`, `lib/home/` | 결과 화면 모델(탭·필터·카드), 첫 화면 기준일 | ③ |
+| `app/ui/` | 화면 공통 그림: 선 아이콘, 시·도 지도, 상품 그림 타일, 판정 3종 색 | ③ |
 | `app/products/[id]/`, `app/chat/`, `app/api/chat/` | 상품 상세, 챗봇 화면·API | ④ |
 | `lib/engine/__tests__/`, `docs/` | 테스트, 계획서·보고서 | ⑤ |
 
