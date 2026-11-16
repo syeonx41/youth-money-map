@@ -15,7 +15,7 @@ import { z } from "zod";
 import { products } from "@/lib/data";
 import { todayInSeoul } from "@/lib/engine";
 import type { ChatReply } from "./contract";
-import { SYSTEM_RULES, buildMaterial, verifyCitations, withAgeRuleNote, withSavingLimitNote } from "./prompt";
+import { SYSTEM_RULES, buildMaterial, verifyCitations, withAgeRuleNote, withSavingLimitNote, withTaxFreeNote } from "./prompt";
 import { parseChatRequest } from "./validate";
 
 /** 기본 모델. 바꾸려면 GEMINI_MODEL 환경변수에 모델 이름을 넣어요 */
@@ -130,11 +130,12 @@ export async function POST(request: Request) {
     if (!reply.success) return fail(502, "답변을 만들지 못했어요. 다시 시도해 주세요");
 
     const question = parsed.request.messages.at(-1)?.content ?? "";
+    const viewed = products.find((p) => p.id === parsed.request.productId) ?? null;
     const result: ChatReply = {
-      answer: withSavingLimitNote(
-        withAgeRuleNote(reply.data.answer.trim(), question, parsed.request.productId),
+      answer: withTaxFreeNote(
+        withSavingLimitNote(withAgeRuleNote(reply.data.answer.trim(), question, parsed.request.productId), question, viewed),
         question,
-        products.find((p) => p.id === parsed.request.productId) ?? null,
+        viewed,
       ),
       citations: verifyCitations(reply.data.citations, material.sources).slice(0, 3),
       followUps: reply.data.followUps.slice(0, 3),

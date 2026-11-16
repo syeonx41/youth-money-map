@@ -186,3 +186,20 @@ export function withSavingLimitNote(answer: string, question: string, product: P
   const missing = (maxMonthly && !answer.includes(maxMonthly)) || (term && !answer.includes(term));
   return missing ? `${answer}\n\n납입 조건: ${limit}` : answer;
 }
+
+/**
+ * 비과세를 물었는데 가입 소득 기준과 비과세 소득 기준이 다른 상품이면, 두 기준이 다르다는 문장을 답에 없을 때만 덧붙여요
+ * (AI가 가입 기준 숫자를 자주 빼먹어서 코드로 고정. 숫자는 ② 데이터의 소득 조건과 비과세 설명에서 가져와요)
+ */
+export function withTaxFreeNote(answer: string, question: string, product: Product | null): string {
+  if (!product || !/비과세/.test(question)) return answer;
+  const joinMax = product.conditions.find((c) => c.type === "personalIncome")?.max;
+  const taxFree = (product.benefits.governmentSupports ?? []).find((g) => g.label.includes("비과세"))?.description;
+  const taxFreeMax = taxFree?.match(/총급여 ([\d,]+만원) 이하/)?.[1];
+  if (joinMax === undefined || !taxFreeMax) return answer;
+  const joinText = `${joinMax.toLocaleString("ko-KR")}만원`;
+  if (taxFreeMax === joinText) return answer;
+  const mentioned = [joinText, `${joinMax}만`, `${joinMax / 1000}천만`].some((s) => answer.replace(/\s/g, "").includes(s));
+  if (mentioned) return answer;
+  return `${answer}\n\n가입 기준(연소득 ${joinText} 이하)과 비과세 기준(총급여 ${taxFreeMax} 이하)은 달라요. 가입할 수 있어도 비과세 대상이 아닐 수 있어요.`;
+}

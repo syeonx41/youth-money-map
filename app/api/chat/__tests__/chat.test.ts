@@ -3,7 +3,7 @@ import { judgeAll } from "@/lib/engine";
 import { medianIncome, products } from "@/lib/data";
 import profiles from "@/lib/engine/__tests__/profiles.json";
 import type { UserInput } from "@/types";
-import { AGE_RULE_NOTE, buildMaterial, relatedProducts, verifyCitations, withAgeRuleNote, withSavingLimitNote } from "../prompt";
+import { AGE_RULE_NOTE, buildMaterial, relatedProducts, verifyCitations, withAgeRuleNote, withSavingLimitNote, withTaxFreeNote } from "../prompt";
 import { parseChatRequest } from "../validate";
 
 const TODAY = "2026-11-15";
@@ -131,6 +131,21 @@ describe("적금 납입 조건 고정 (④)", () => {
     expect(withSavingLimitNote(full, "정부 기여금은 얼마나 받아요?", future)).toBe(full);
     expect(withSavingLimitNote("답", "지금 바로 가입할 수 있어요?", future)).toBe("답");
     expect(withSavingLimitNote("답", "대출 얼마나 돼요?", loan)).toBe("답");
+  });
+});
+
+describe("비과세 기준 차이 고정 (④)", () => {
+  const dream = products.find((p) => p.id === "youth-housing-dream")!;
+
+  it("비과세를 물었는데 가입 기준 숫자가 없으면 두 기준이 다르다고 붙임", () => {
+    const out = withTaxFreeNote("세대주여야 해요.", "이자 비과세는 누구나 받아요?", dream);
+    expect(out).toContain("가입 기준(연소득 5,000만원 이하)과 비과세 기준(총급여 3,600만원 이하)은 달라요");
+  });
+
+  it("이미 5천만원을 말했거나 비과세 질문이 아니면 그대로", () => {
+    const said = "가입 조건인 연소득 5천만 원 이하와 달라요.";
+    expect(withTaxFreeNote(said, "이자 비과세는 누구나 받아요?", dream)).toBe(said);
+    expect(withTaxFreeNote("답", "금리는 얼마예요?", dream)).toBe("답");
   });
 });
 
