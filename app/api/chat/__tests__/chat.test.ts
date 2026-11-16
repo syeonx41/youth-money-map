@@ -190,6 +190,27 @@ describe("POST /api/chat (④, Gemini 는 가짜로 대체)", () => {
     expect(res.status).toBe(429);
   });
 
+  it("기본 모델이 혼잡(503)하면 다른 모델로 한 번 더 물어봄", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+    const { ApiError } = await vi.importActual<typeof import("@google/genai")>("@google/genai");
+    generateContent
+      .mockRejectedValueOnce(new ApiError({ message: "overloaded", status: 503 }))
+      .mockResolvedValueOnce(reply({ answer: "답", citations: [], followUps: [] }));
+    const res = await post({ productId: null, judgements: [], messages: ask("질문") });
+    expect(res.status).toBe(200);
+    const [first, second] = generateContent.mock.calls.map((c) => c[0].model);
+    expect(first).not.toBe(second);
+  });
+
+  it("두 모델 모두 혼잡하면 502", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+    const { ApiError } = await vi.importActual<typeof import("@google/genai")>("@google/genai");
+    generateContent.mockRejectedValue(new ApiError({ message: "overloaded", status: 503 }));
+    const res = await post({ productId: null, judgements: [], messages: ask("질문") });
+    expect(res.status).toBe(502);
+    expect(generateContent).toHaveBeenCalledTimes(2);
+  });
+
   it("응답이 너무 오래 걸리면 504 (배포 시간 제한 전에 끝냄)", async () => {
     vi.stubEnv("GEMINI_API_KEY", "test-key");
     generateContent.mockRejectedValue(new DOMException("timeout", "TimeoutError"));
