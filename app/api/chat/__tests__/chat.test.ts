@@ -104,29 +104,24 @@ describe("근거 인용 대조 (④)", () => {
   });
 });
 
-describe("POST /api/chat (④, Claude 는 가짜로 대체)", () => {
-  const create = vi.fn();
+describe("POST /api/chat (④, Gemini 는 가짜로 대체)", () => {
+  const generateContent = vi.fn();
 
   beforeEach(() => {
     vi.resetModules();
-    create.mockReset();
-    vi.doMock("@anthropic-ai/sdk", async (orig) => {
-      const real = (await orig()) as {
-        default: { RateLimitError: unknown; APIError: unknown; APIConnectionTimeoutError: unknown };
-      };
-      class FakeAnthropic {
-        static RateLimitError = real.default.RateLimitError;
-        static APIError = real.default.APIError;
-        static APIConnectionTimeoutError = real.default.APIConnectionTimeoutError;
-        beta = { messages: { create } };
+    generateContent.mockReset();
+    vi.doMock("@google/genai", async (orig) => {
+      const real = (await orig()) as typeof import("@google/genai");
+      class FakeGoogleGenAI {
+        models = { generateContent };
       }
-      return { default: FakeAnthropic };
+      return { ...real, GoogleGenAI: FakeGoogleGenAI };
     });
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
-    vi.doUnmock("@anthropic-ai/sdk");
+    vi.doUnmock("@google/genai");
   });
 
   async function post(body: unknown) {
@@ -134,31 +129,30 @@ describe("POST /api/chat (④, Claude 는 가짜로 대체)", () => {
     return POST(new Request("http://test/api/chat", { method: "POST", body: JSON.stringify(body) }));
   }
 
+  const reply = (obj: unknown, finishReason = "STOP") => ({
+    text: JSON.stringify(obj),
+    candidates: [{ finishReason }],
+  });
+
   it("API 키가 없으면 503", async () => {
-    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    vi.stubEnv("GEMINI_API_KEY", "");
     const res = await post({ productId: null, judgements: [], messages: ask("안녕") });
     expect(res.status).toBe(503);
-    expect(create).not.toHaveBeenCalled();
+    expect(generateContent).not.toHaveBeenCalled();
   });
 
   it("답변을 돌려주고, 지어낸 인용은 빼고, 입력 원본은 보내지 않음", async () => {
-    vi.stubEnv("ANTHROPIC_API_KEY", "test-key");
-    create.mockResolvedValue({
-      stop_reason: "end_turn",
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify({
-            answer: "네, 갈아탈 수 있어요.",
-            citations: [
-              { label: "갈아타기 원문", quote: "계좌개설 전 청년도약계좌 해지시 갈아타기 불가" },
-              { label: "지어냄", quote: "무조건 이득이에요" },
-            ],
-            followUps: ["손해는 없어요?"],
-          }),
-        },
-      ],
-    });
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+    generateContent.mockResolvedValue(
+      reply({
+        answer: "네, 갈아탈 수 있어요.",
+        citations: [
+          { label: "갈아타기 원문", quote: "계좌개설 전 청년도약계좌 해지시 갈아타기 불가" },
+          { label: "지어냄", quote: "무조건 이득이에요" },
+        ],
+        followUps: ["손해는 없어요?"],
+      }),
+    );
 
     const res = await post({ productId: "youth-future-saving", judgements: [future], messages: ask("갈아탈 수 있어요?") });
     expect(res.status).toBe(200);
@@ -166,30 +160,46 @@ describe("POST /api/chat (④, Claude 는 가짜로 대체)", () => {
     expect(data.answer).toBe("네, 갈아탈 수 있어요.");
     expect(data.citations).toEqual([{ label: "갈아타기 원문", quote: "계좌개설 전 청년도약계좌 해지시 갈아타기 불가" }]);
 
-    const params = create.mock.calls[0][0];
-    expect(params.model).toBe("claude-opus-5-5");
-    expect(params.fallbacks).toBe("default");
+    const params = generateContent.mock.calls[0][0];
+    expect(params.model).toMatch(/^gemini-/);
+    expect(params.contents).toEqual([{ role: "user", parts: [{ text: "갈아탈 수 있어요?" }] }]);
+    expect(params.config.systemInstruction).toContain("<자료>");
     expect(JSON.stringify(params)).not.toContain(P02.input.birthDate!);
   });
 
-  it("거절되면 422", async () => {
-    vi.stubEnv("ANTHROPIC_API_KEY", "test-key");
-    create.mockResolvedValue({ stop_reason: "refusal", content: [] });
+  it("이전 AI 답변은 model 역할로 보냄", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+    generateContent.mockResolvedValue(reply({ answer: "답", citations: [], followUps: [] }));
+    const messages = [...ask("q1"), { role: "assistant", content: "a1" }, ...ask("q2")];
+    await post({ productId: null, judgements: [], messages });
+    expect(generateContent.mock.calls[0][0].contents.map((c: { role: string }) => c.role)).toEqual(["user", "model", "user"]);
+  });
+
+  it("안전 필터로 막히면 422", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+    generateContent.mockResolvedValue({ text: "", candidates: [{ finishReason: "SAFETY" }] });
     const res = await post({ productId: null, judgements: [], messages: ask("질문") });
     expect(res.status).toBe(422);
   });
 
-  it("Claude 응답이 너무 오래 걸리면 504 (배포 시간 제한 전에 끝냄)", async () => {
-    vi.stubEnv("ANTHROPIC_API_KEY", "test-key");
-    const { default: RealAnthropic } = await vi.importActual<typeof import("@anthropic-ai/sdk")>("@anthropic-ai/sdk");
-    create.mockRejectedValue(new RealAnthropic.APIConnectionTimeoutError());
+  it("사용량 초과(429)면 429", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+    const { ApiError } = await vi.importActual<typeof import("@google/genai")>("@google/genai");
+    generateContent.mockRejectedValue(new ApiError({ message: "quota", status: 429 }));
+    const res = await post({ productId: null, judgements: [], messages: ask("질문") });
+    expect(res.status).toBe(429);
+  });
+
+  it("응답이 너무 오래 걸리면 504 (배포 시간 제한 전에 끝냄)", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+    generateContent.mockRejectedValue(new DOMException("timeout", "TimeoutError"));
     const res = await post({ productId: null, judgements: [], messages: ask("질문") });
     expect(res.status).toBe(504);
   });
 
   it("형식이 깨진 답변이면 502", async () => {
-    vi.stubEnv("ANTHROPIC_API_KEY", "test-key");
-    create.mockResolvedValue({ stop_reason: "end_turn", content: [{ type: "text", text: "{\"answer\": 1}" }] });
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+    generateContent.mockResolvedValue({ text: "{\"answer\": 1}", candidates: [{ finishReason: "STOP" }] });
     const res = await post({ productId: null, judgements: [], messages: ask("질문") });
     expect(res.status).toBe(502);
   });
