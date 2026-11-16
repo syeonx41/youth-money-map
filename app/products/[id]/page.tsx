@@ -1,12 +1,15 @@
-// ④ 담당: 상품 상세 / 해당 없음 상세 (와이어프레임 ④-1 ~ ④-3)
-// - 상품 정보: lib/data.ts 의 getProduct(id) 또는 fetchProduct(id)
-// - 판정 결과(ProductJudgement)는 결과 화면에서 넘겨받기 (방법은 ③과 정하기)
+// ④ 담당: 상품 상세 (와이어프레임 화면 11 ~ 13)
+// - 상품 정보는 lib/data.ts 의 getProduct(id)
+// - 판정 결과는 ③ 공유 세션(useJudgeSession)에서 꺼내요 → ProductDetailWithSession
+import { notFound } from "next/navigation";
+import { getProduct } from "@/lib/data";
+import { todayInSeoul } from "@/lib/engine";
+import ProductDetailWithSession from "./ProductDetailWithSession";
+
 export default async function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return (
-    <main className="px-5 py-8">
-      <h1 className="text-xl font-semibold">상품 상세</h1>
-      <p className="mt-2 text-sm text-gray-600">TODO(④): {id} 상세 화면</p>
-    </main>
-  );
+  const product = getProduct(id);
+  if (!product) notFound();
+
+  return <ProductDetailWithSession product={product} today={todayInSeoul()} />;
 }
