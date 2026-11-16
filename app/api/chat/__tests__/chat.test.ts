@@ -3,7 +3,7 @@ import { judgeAll } from "@/lib/engine";
 import { medianIncome, products } from "@/lib/data";
 import profiles from "@/lib/engine/__tests__/profiles.json";
 import type { UserInput } from "@/types";
-import { buildMaterial, relatedProducts, verifyCitations } from "../prompt";
+import { AGE_RULE_NOTE, buildMaterial, relatedProducts, verifyCitations, withAgeRuleNote, withSavingLimitNote } from "../prompt";
 import { parseChatRequest } from "../validate";
 
 const TODAY = "2026-11-15";
@@ -101,6 +101,36 @@ describe("근거 인용 대조 (④)", () => {
   it("지어낸 인용은 버림", () => {
     const kept = verifyCitations([{ label: "원문", quote: "신용점수 700점 이상이어야 해요" }], sources);
     expect(kept).toHaveLength(0);
+  });
+});
+
+describe("나이 질문 안내 고정 (④)", () => {
+  it("상품을 보며 나이·병역을 물었는데 '상품마다' 안내가 없으면 붙임", () => {
+    const out = withAgeRuleNote("만 34세라서 충족했어요.", "저 36살인데 군대 다녀왔으면 가입돼요?", "youth-future-saving");
+    expect(out).toContain(AGE_RULE_NOTE);
+  });
+
+  it("이미 안내가 있거나, 나이 질문이 아니거나, 상품 없이 물으면 그대로", () => {
+    expect(withAgeRuleNote("다른 상품은 기준이 달라요.", "나이 어떻게 계산해요?", "youth-future-saving")).not.toContain(AGE_RULE_NOTE);
+    expect(withAgeRuleNote("6%예요.", "정부 기여금은 얼마나 받아요?", "youth-future-saving")).not.toContain(AGE_RULE_NOTE);
+    expect(withAgeRuleNote("답", "나이 조건이 뭐예요?", null)).not.toContain(AGE_RULE_NOTE);
+  });
+});
+
+describe("적금 납입 조건 고정 (④)", () => {
+  const future = products.find((p) => p.id === "youth-future-saving")!;
+  const loan = products.find((p) => p.id === "youth-jeonse-loan")!;
+
+  it("기여금을 물었는데 월 한도·만기가 빠지면 납입 조건을 붙임", () => {
+    const out = withSavingLimitNote("일반형은 6%예요.", "정부 기여금은 얼마나 받아요?", future);
+    expect(out).toContain("납입 조건: 월 1천원~50만원 자유 납입 (연 600만원 한도), 3년 만기");
+  });
+
+  it("이미 50만원·3년이 있거나, 금액 질문이 아니거나, 대출 상품이면 그대로", () => {
+    const full = "월 최대 50만원, 3년 만기예요.";
+    expect(withSavingLimitNote(full, "정부 기여금은 얼마나 받아요?", future)).toBe(full);
+    expect(withSavingLimitNote("답", "지금 바로 가입할 수 있어요?", future)).toBe("답");
+    expect(withSavingLimitNote("답", "대출 얼마나 돼요?", loan)).toBe("답");
   });
 });
 

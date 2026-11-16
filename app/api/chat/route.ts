@@ -15,7 +15,7 @@ import { z } from "zod";
 import { products } from "@/lib/data";
 import { todayInSeoul } from "@/lib/engine";
 import type { ChatReply } from "./contract";
-import { SYSTEM_RULES, buildMaterial, verifyCitations } from "./prompt";
+import { SYSTEM_RULES, buildMaterial, verifyCitations, withAgeRuleNote, withSavingLimitNote } from "./prompt";
 import { parseChatRequest } from "./validate";
 
 /** 기본 모델. 바꾸려면 GEMINI_MODEL 환경변수에 모델 이름을 넣어요 */
@@ -129,8 +129,13 @@ export async function POST(request: Request) {
     const reply = ReplySchema.safeParse(JSON.parse(text));
     if (!reply.success) return fail(502, "답변을 만들지 못했어요. 다시 시도해 주세요");
 
+    const question = parsed.request.messages.at(-1)?.content ?? "";
     const result: ChatReply = {
-      answer: reply.data.answer.trim(),
+      answer: withSavingLimitNote(
+        withAgeRuleNote(reply.data.answer.trim(), question, parsed.request.productId),
+        question,
+        products.find((p) => p.id === parsed.request.productId) ?? null,
+      ),
       citations: verifyCitations(reply.data.citations, material.sources).slice(0, 3),
       followUps: reply.data.followUps.slice(0, 3),
     };

@@ -160,3 +160,29 @@ export function verifyCitations(citations: ChatCitation[], sources: string[]): C
     return q.length >= 4 && haystack.some((s) => s.includes(q));
   });
 }
+
+/** 나이 계산은 상품마다 기준이 달라서, 나이·병역 질문에는 이 안내를 항상 붙여요 (AI가 가끔 빼먹어서 코드로 고정) */
+export const AGE_RULE_NOTE = "나이 계산(병역 기간 반영 등)은 상품마다 기준이 달라요. 다른 상품은 각 상품의 판정 결과를 봐 주세요.";
+const AGE_QUESTION = /나이|병역|군대|군복무|군 복무|제대|전역|몇\s*살|\d+\s*살/;
+
+/** 상품을 보며 나이·병역을 물었는데 답에 '상품마다 다르다'는 말이 없으면 안내 문장을 덧붙여요 */
+export function withAgeRuleNote(answer: string, question: string, productId: string | null): string {
+  if (!productId || !AGE_QUESTION.test(question)) return answer;
+  if (/상품마다|다른 상품/.test(answer)) return answer;
+  return `${answer}\n\n${AGE_RULE_NOTE}`;
+}
+
+const MONEY_QUESTION = /기여금|지원금|얼마/;
+
+/**
+ * 적금 상품에서 기여금·금액을 물었는데 답에 월 납입 한도나 만기가 빠지면, 상품 데이터의 납입 조건을 덧붙여요
+ * (AI가 가끔 빼먹어서 코드로 고정. 문장은 ② 데이터 benefits.limit 그대로)
+ */
+export function withSavingLimitNote(answer: string, question: string, product: Product | null): string {
+  const limit = product?.benefits.limit;
+  if (!limit || !limit.includes("납입") || !MONEY_QUESTION.test(question)) return answer;
+  const maxMonthly = limit.match(/~\s*([\d,]+만원)/)?.[1];
+  const term = limit.match(/(\d+년) 만기/)?.[1];
+  const missing = (maxMonthly && !answer.includes(maxMonthly)) || (term && !answer.includes(term));
+  return missing ? `${answer}\n\n납입 조건: ${limit}` : answer;
+}
