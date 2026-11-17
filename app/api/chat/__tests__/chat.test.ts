@@ -3,7 +3,7 @@ import { judgeAll } from "@/lib/engine";
 import { medianIncome, products } from "@/lib/data";
 import profiles from "@/lib/engine/__tests__/profiles.json";
 import type { UserInput } from "@/types";
-import { buildMaterial, relatedProducts, verifyCitations } from "../prompt";
+import { AGE_RULE_NOTE, buildMaterial, relatedProducts, verifyCitations, withAgeRuleNote, withSavingLimitNote, withTaxFreeNote } from "../prompt";
 import { parseChatRequest } from "../validate";
 
 const TODAY = "2026-11-15";
@@ -104,6 +104,51 @@ describe("근거 인용 대조 (④)", () => {
   });
 });
 
+describe("나이 질문 안내 고정 (④)", () => {
+  it("상품을 보며 나이·병역을 물었는데 '상품마다' 안내가 없으면 붙임", () => {
+    const out = withAgeRuleNote("만 34세라서 충족했어요.", "저 36살인데 군대 다녀왔으면 가입돼요?", "youth-future-saving");
+    expect(out).toContain(AGE_RULE_NOTE);
+  });
+
+  it("이미 안내가 있거나, 나이 질문이 아니거나, 상품 없이 물으면 그대로", () => {
+    expect(withAgeRuleNote("다른 상품은 기준이 달라요.", "나이 어떻게 계산해요?", "youth-future-saving")).not.toContain(AGE_RULE_NOTE);
+    expect(withAgeRuleNote("6%예요.", "정부 기여금은 얼마나 받아요?", "youth-future-saving")).not.toContain(AGE_RULE_NOTE);
+    expect(withAgeRuleNote("답", "나이 조건이 뭐예요?", null)).not.toContain(AGE_RULE_NOTE);
+  });
+});
+
+describe("적금 납입 조건 고정 (④)", () => {
+  const future = products.find((p) => p.id === "youth-future-saving")!;
+  const loan = products.find((p) => p.id === "youth-jeonse-loan")!;
+
+  it("기여금을 물었는데 월 한도·만기가 빠지면 납입 조건을 붙임", () => {
+    const out = withSavingLimitNote("일반형은 6%예요.", "정부 기여금은 얼마나 받아요?", future);
+    expect(out).toContain("납입 조건: 월 1천원~50만원 자유 납입 (연 600만원 한도), 3년 만기");
+  });
+
+  it("이미 50만원·3년이 있거나, 금액 질문이 아니거나, 대출 상품이면 그대로", () => {
+    const full = "월 최대 50만원, 3년 만기예요.";
+    expect(withSavingLimitNote(full, "정부 기여금은 얼마나 받아요?", future)).toBe(full);
+    expect(withSavingLimitNote("답", "지금 바로 가입할 수 있어요?", future)).toBe("답");
+    expect(withSavingLimitNote("답", "대출 얼마나 돼요?", loan)).toBe("답");
+  });
+});
+
+describe("비과세 기준 차이 고정 (④)", () => {
+  const dream = products.find((p) => p.id === "youth-housing-dream")!;
+
+  it("비과세를 물었는데 가입 기준 숫자가 없으면 두 기준이 다르다고 붙임", () => {
+    const out = withTaxFreeNote("세대주여야 해요.", "이자 비과세는 누구나 받아요?", dream);
+    expect(out).toContain("가입 기준(연소득 5,000만원 이하)과 비과세 기준(총급여 3,600만원 이하)은 달라요");
+  });
+
+  it("이미 5천만원을 말했거나 비과세 질문이 아니면 그대로", () => {
+    const said = "가입 조건인 연소득 5천만 원 이하와 달라요.";
+    expect(withTaxFreeNote(said, "이자 비과세는 누구나 받아요?", dream)).toBe(said);
+    expect(withTaxFreeNote("답", "금리는 얼마예요?", dream)).toBe("답");
+  });
+});
+
 describe("POST /api/chat (④, Gemini 는 가짜로 대체)", () => {
   const generateContent = vi.fn();
 
@@ -188,6 +233,27 @@ describe("POST /api/chat (④, Gemini 는 가짜로 대체)", () => {
     generateContent.mockRejectedValue(new ApiError({ message: "quota", status: 429 }));
     const res = await post({ productId: null, judgements: [], messages: ask("질문") });
     expect(res.status).toBe(429);
+  });
+
+  it("기본 모델이 혼잡(503)하면 다른 모델로 한 번 더 물어봄", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+    const { ApiError } = await vi.importActual<typeof import("@google/genai")>("@google/genai");
+    generateContent
+      .mockRejectedValueOnce(new ApiError({ message: "overloaded", status: 503 }))
+      .mockResolvedValueOnce(reply({ answer: "답", citations: [], followUps: [] }));
+    const res = await post({ productId: null, judgements: [], messages: ask("질문") });
+    expect(res.status).toBe(200);
+    const [first, second] = generateContent.mock.calls.map((c) => c[0].model);
+    expect(first).not.toBe(second);
+  });
+
+  it("두 모델 모두 혼잡하면 502", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+    const { ApiError } = await vi.importActual<typeof import("@google/genai")>("@google/genai");
+    generateContent.mockRejectedValue(new ApiError({ message: "overloaded", status: 503 }));
+    const res = await post({ productId: null, judgements: [], messages: ask("질문") });
+    expect(res.status).toBe(502);
+    expect(generateContent).toHaveBeenCalledTimes(2);
   });
 
   it("응답이 너무 오래 걸리면 504 (배포 시간 제한 전에 끝냄)", async () => {

@@ -15,11 +15,14 @@ import { z } from "zod";
 import { products } from "@/lib/data";
 import { todayInSeoul } from "@/lib/engine";
 import type { ChatReply } from "./contract";
-import { SYSTEM_RULES, buildMaterial, verifyCitations } from "./prompt";
+import { SYSTEM_RULES, buildMaterial, verifyCitations, withAgeRuleNote, withSavingLimitNote, withTaxFreeNote } from "./prompt";
 import { parseChatRequest } from "./validate";
 
 /** 기본 모델. 바꾸려면 GEMINI_MODEL 환경변수에 모델 이름을 넣어요 */
 const DEFAULT_MODEL = "gemini-3.5-flash-lite";
+/** 기본 모델이 혼잡(5xx)하거나 사용량 제한(429)에 걸리면 한 번 바꿔서 물어보는 모델 (무료 등급은 모델마다 한도가 따로예요) */
+const FALLBACK_MODEL = "gemini-3.1-flash-lite";
+const SWITCH_MODEL_STATUSES = new Set([429, 500, 502, 503]);
 
 /**
  * 배포(Vercel)에서 이 API가 기다려 주는 최대 시간(초). 기본값이 짧으면 답변 중간에 끊겨요.
@@ -27,6 +30,8 @@ const DEFAULT_MODEL = "gemini-3.5-flash-lite";
  */
 export const maxDuration = 60;
 const AI_TIMEOUT_MS = 50_000;
+/** 모델 하나를 기다리는 최대 시간. 넘으면 남은 시간에 다른 모델로 물어봐요 (평소 답변은 2~5초) */
+const MODEL_TIMEOUT_MS = 20_000;
 
 /** 모델 답변 형식 (구조화 출력으로 강제하고, 받은 뒤 한 번 더 검사해요) */
 const ReplySchema = z.object({
@@ -74,13 +79,15 @@ export async function POST(request: Request) {
   const material = buildMaterial(parsed.request, products, todayInSeoul());
   const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
-    // 서버 혼잡(503 등) 같은 일시 오류만 1번 다시 시도해요. 전체 시간은 아래 abortSignal 로 묶어요
-    httpOptions: { timeout: AI_TIMEOUT_MS, retryOptions: { attempts: 2, initialDelay: 1, httpStatusCodes: [500, 502, 503] } },
+    // 같은 모델로 다시 시도하면 혼잡할 때 오래 걸려서, 일시 오류는 아래에서 다른 모델로 바로 넘겨요. 전체 시간은 abortSignal 로 묶어요
+    httpOptions: { timeout: AI_TIMEOUT_MS, retryOptions: { attempts: 1 } },
   });
 
-  try {
-    const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || DEFAULT_MODEL,
+  const models = [...new Set([process.env.GEMINI_MODEL || DEFAULT_MODEL, FALLBACK_MODEL])];
+  const abortSignal = AbortSignal.timeout(AI_TIMEOUT_MS);
+  const ask = (model: string, last: boolean) =>
+    ai.models.generateContent({
+      model,
       contents: parsed.request.messages.map((m) => ({
         role: m.role === "assistant" ? "model" : "user",
         parts: [{ text: m.content }],
@@ -90,9 +97,25 @@ export async function POST(request: Request) {
         responseMimeType: "application/json",
         responseJsonSchema: REPLY_JSON_SCHEMA,
         maxOutputTokens: 8192,
-        abortSignal: AbortSignal.timeout(AI_TIMEOUT_MS),
+        abortSignal: last ? abortSignal : AbortSignal.any([abortSignal, AbortSignal.timeout(MODEL_TIMEOUT_MS)]),
       },
     });
+
+  try {
+    let response;
+    for (const [i, model] of models.entries()) {
+      const last = i === models.length - 1;
+      try {
+        response = await ask(model, last);
+        break;
+      } catch (error) {
+        const busy = error instanceof ApiError && SWITCH_MODEL_STATUSES.has(error.status);
+        const slow = error instanceof Error && !abortSignal.aborted && (error.name === "TimeoutError" || error.name === "AbortError");
+        if (last || !(busy || slow)) throw error;
+        console.error(`[chat] ${model} ${busy ? `오류 ${(error as ApiError).status}` : "응답 지연"}, 다른 모델로 다시 시도`);
+      }
+    }
+    if (!response) throw new Error("no response");
 
     const finish = response.candidates?.[0]?.finishReason;
     if (response.promptFeedback?.blockReason || finish === FinishReason.SAFETY || finish === FinishReason.RECITATION) {
@@ -106,8 +129,14 @@ export async function POST(request: Request) {
     const reply = ReplySchema.safeParse(JSON.parse(text));
     if (!reply.success) return fail(502, "답변을 만들지 못했어요. 다시 시도해 주세요");
 
+    const question = parsed.request.messages.at(-1)?.content ?? "";
+    const viewed = products.find((p) => p.id === parsed.request.productId) ?? null;
     const result: ChatReply = {
-      answer: reply.data.answer.trim(),
+      answer: withTaxFreeNote(
+        withSavingLimitNote(withAgeRuleNote(reply.data.answer.trim(), question, parsed.request.productId), question, viewed),
+        question,
+        viewed,
+      ),
       citations: verifyCitations(reply.data.citations, material.sources).slice(0, 3),
       followUps: reply.data.followUps.slice(0, 3),
     };
