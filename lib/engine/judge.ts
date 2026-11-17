@@ -9,6 +9,7 @@ import type {
   UserInput,
 } from "@/types";
 import { evaluateCondition, type JudgeContext } from "./conditions";
+import { withJosa } from "./josa";
 
 const STATUS_ORDER: Record<JudgeStatus, number> = { eligible: 0, needsCheck: 1, ineligible: 2 };
 
@@ -34,8 +35,8 @@ export function findConflicts(product: Product, input: UserInput, all: Product[]
         conflictingProductId: otherId,
         conflictingProductName: otherName,
         message: switchGuide
-          ? `가입 중인 ${otherName}과 동시에 가입할 수 없어요. 갈아타려면 순서를 꼭 확인하세요`
-          : `가입 중인 ${otherName}과 동시에 가입할 수 없어요`,
+          ? `가입 중인 ${withJosa(otherName, "과", "와")} 동시에 가입할 수 없어요. 갈아타려면 순서를 꼭 확인하세요`
+          : `가입 중인 ${withJosa(otherName, "과", "와")} 동시에 가입할 수 없어요`,
         switchGuide,
       });
     }

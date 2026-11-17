@@ -1,5 +1,4 @@
 // ③ 담당: 첫 화면 (와이어프레임 ① 첫 화면)
-import Link from "next/link";
 import { products } from "@/lib/data";
 import { latestAsOf, toDotDate } from "@/lib/home/data-as-of";
 import { STATUS_LABEL, STATUS_ORDER } from "@/lib/result/result-view";
@@ -82,9 +81,6 @@ export default function HomePage() {
           ))}
         </ul>
 
-        <Link href="/dev/judge" className="text-center text-xs text-ink-mute underline">
-          (개발용) 판정 API 테스트
-        </Link>
       </main>
 
       <footer className="mt-auto border-t border-line px-5 py-4 text-xs text-ink-mute">
