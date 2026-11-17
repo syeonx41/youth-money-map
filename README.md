@@ -5,7 +5,7 @@
 나이·소득·가구·주택 여부를 한 번 입력하면 대출·적금·청약 상품마다 **가능 / 확인 필요 / 해당 없음**을 판정하고, 조건별 이유와 중복 가입·갈아타기 안내를 보여줘요. 로그인 없이 쓰고 입력 정보는 저장하지 않아요.
 
 - **접속 주소**: https://youth-money-map.vercel.app (휴대폰 화면에 맞춘 모바일 웹이에요)
-- **시연 영상**: 【유튜브 비공개 링크 입력 예정】
+- **시연 영상**: https://youtube.com/shorts/kbqA6HGD_BQ
 - **결과보고서**: [docs/report.md](./docs/report.md) (제출 양식: [docs/report.docx](./docs/report.docx))
 
 ## 주요 기능
